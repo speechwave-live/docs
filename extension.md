@@ -13,7 +13,7 @@ Add [Speechwave on the Chrome Web Store](https://chromewebstore.google.com/) to 
 
 ## Connect your account
 
-Click the Speechwave icon in your toolbar. The first time you open it, it asks you to paste your Speechwave API key to get started, with a link to Account Settings, where the key lives. Paste your key into the field and click **Save Key**.
+Click the Speechwave icon in your toolbar. The first time you open it, it asks you to paste your Speechwave API key to get started, with a link to Account Settings, where the key lives ([where to find your API key](dashboard.html)). Paste your key into the field and click **Save Key**.
 
 If you ever need to swap in a different key — say, after regenerating one — click **Change API key** near the bottom of the popup.
 
