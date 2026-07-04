@@ -1,0 +1,20 @@
+title: Speechwave Docs
+description: >-
+  How to use Speechwave — live emoji reactions from your audience,
+  overlaid on your slides in real time.
+url: "https://docs.speechwave.live"
+baseurl: ""
+
+theme: just-the-docs
+color_scheme: light
+
+aux_links:
+  "speechwave.live":
+    - "https://speechwave.live"
+aux_links_new_tab: true
+
+defaults:
+  - scope:
+      path: ""
+    values:
+      layout: default
