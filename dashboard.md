@@ -45,4 +45,4 @@ If your talk has more than one session, you can also compare two sessions of the
 
 ## Plan usage
 
-Your dashboard shows a running summary of your plan's usage for the current month: how many **full sessions** you've used (any session longer than 10 minutes) against your plan's monthly limit, and the maximum number of participants allowed per talk. Once you reach your monthly full-session limit, new full sessions are blocked until next month — shorter sessions aren't affected.
+Your dashboard shows a running summary of your plan's usage for the current month: how many **full sessions** you've used (any session longer than 10 minutes) against your plan's monthly limit, and the maximum number of participants allowed per talk. Once you reach your monthly full-session limit, you won't be able to start new sessions until the next month begins.
