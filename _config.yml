@@ -6,7 +6,8 @@ url: "https://docs.speechwave.live"
 baseurl: ""
 
 theme: just-the-docs
-color_scheme: light
+logo: "/assets/images/logo.svg"
+color_scheme: speechwave
 
 aux_links:
   "speechwave.live":
