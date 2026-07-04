@@ -1,5 +1,5 @@
-// Speechwave scheme: just-the-docs light scheme with the app's indigo accent.
-@import "./color_schemes/light";
-
+// Speechwave scheme: the app's indigo accent over the default light scheme.
+// No light-scheme import needed: just-the-docs imports light before any
+// custom scheme.
 $link-color: #4f46e5; // indigo-600, the app's primary action color
 $btn-primary-color: #4f46e5;
