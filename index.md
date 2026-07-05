@@ -5,7 +5,7 @@ nav_order: 1
 
 # Speechwave
 
-Speechwave lets your audience send live emoji reactions from their phones during your talk. The reactions float up over your slides in real time, so you can see how the room is responding as you speak — no polling app, no awkward pause for feedback, just a running pulse of reactions from the crowd.
+Speechwave lets your audience send live emoji reactions from their phones during your talk. The reactions float up over your slides in real time, so you can see how the room is responding as you speak.
 
 ## The three pieces
 
@@ -14,7 +14,7 @@ Speechwave has three parts that work together.
 **Audience mobile view**
 Your audience opens your talk's link (`https://speechwave.live/t/<your-talk-slug>`) on their phone, or scans a QR code you display on screen. There's nothing to install and no account to create — they just open the page and start tapping emoji.
 
-**Speaker dashboard**
+**Speaker dashboard & analytics**
 This is where you manage your talks. Create a talk to get a QR code and link to share with your audience, and find the talk slug and API key you'll need to connect the Chrome extension. After you present, come back here to review your session analytics. See [Speaker dashboard & analytics](dashboard.html).
 
 **Chrome extension**

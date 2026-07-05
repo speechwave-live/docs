@@ -17,7 +17,7 @@ If you just installed, updated, or reloaded the extension, refresh any Google Sl
 
 ## Why am I seeing "Invalid API key" after regenerating my key?
 
-Regenerating your key on the [Account Settings](dashboard.html) page immediately invalidates the old one, so the extension needs the new key too:
+Regenerating your key on the [Account Settings](dashboard.html#finding-your-api-key) page immediately invalidates the old one, so the extension needs the new key too:
 
 1. Click **Change API key** in the extension popup.
 2. Copy the new key from Account Settings using its copy button.
@@ -31,7 +31,7 @@ You normally won't see any error while you're re-entering the key. If you do cat
 A few different messages can show up here, each with its own fix:
 
 - **Connecting just fails, with no specific message** — double-check the talk slug against the one on your [dashboard](dashboard.html); a mismatched slug is the most common cause.
-- **"Invalid API key"** — copy your key fresh from [Account Settings](dashboard.html) and re-paste it into the popup; it may be out of date.
+- **"Invalid API key"** — copy your key fresh from [Account Settings](dashboard.html#finding-your-api-key) and re-paste it into the popup; it may be out of date.
 - **"Talk is at capacity"** — your plan's participant limit for this talk has been reached. You can review your plan's limits on your [dashboard](dashboard.html).
 - **"Please confirm your email before using the extension"** — confirm your email using the link Speechwave sent you, then reconnect.
 

@@ -9,7 +9,7 @@ Here's everything you need to go from a new account to a talk with live audience
 
 ## 1. Create your account
 
-Go to speechwave.live and sign in. Enter your email and Speechwave sends you a sign-in link — no password to remember. If you'd rather skip email, you can sign in with a Google, Microsoft, or GitHub account instead. Either way, your account is created automatically the first time you sign in.
+Go to speechwave.live and sign in. Enter your email and Speechwave sends you a sign-in link — no password to remember. Or, where offered, sign in with a Google, Microsoft, or GitHub account instead. Either way, your account is created automatically the first time you sign in.
 
 ## 2. Create a talk
 
@@ -25,7 +25,7 @@ The [Chrome extension](extension.html) is what overlays incoming reactions onto 
 
 ## 5. Start a session
 
-A session is one continuous run of your talk, from when you start presenting to when you stop. You start and stop sessions from the extension while you're presenting — not from the dashboard — and every reaction your audience sends is recorded against the current session. That record is what powers the analytics you review afterward: which reactions came in, and on which slide. Once you start a session, it appears on your dashboard, where you can check on it during and after your talk, and compare it against past sessions for the same talk.
+A session is one continuous run of your talk, from when you start presenting to when you stop. You start and stop sessions from the extension while you're presenting — not from the dashboard — and every reaction your audience sends while a session is active is recorded against it; outside a session, reactions still float on screen but aren't saved. That record is what powers the analytics you review afterward: which reactions came in, and on which slide. Once you start a session, it appears on your dashboard, where you can check on it during and after your talk, and compare it against past sessions for the same talk.
 
 ## 6. What happens during the talk
 
