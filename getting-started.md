@@ -9,7 +9,7 @@ Here's everything you need to go from a new account to a talk with live audience
 
 ## 1. Create your account
 
-Go to speechwave.live and sign in. Enter your email and Speechwave sends you a sign-in link — no password to remember. Or, where offered, sign in with a Google, Microsoft, or GitHub account instead. Either way, your account is created automatically the first time you sign in.
+Go to speechwave.live and sign in. Enter your email and Speechwave sends you a sign-in link. There is no password to remember. Or, where offered, sign in with a Google, Microsoft, or GitHub account instead. Either way, your account is created automatically the first time you sign in.
 
 ## 2. Create a talk
 
@@ -17,7 +17,7 @@ From your dashboard, use the "Create a Talk" form and enter a title. Speechwave 
 
 ## 3. Share with your audience
 
-Select your talk in the dashboard to see the URL for your audience and a QR code. Project the QR code on a slide, download it as a PNG for your own materials, or just read the link aloud. Your audience needs no account and no app — they open the link on their phone and they're ready to react.
+Select your talk in the dashboard to see the URL for your audience and a QR code. Project the QR code on a slide, download it as a PNG for your own materials, or just read the link aloud. Your audience needs no account and no app. They open the link on their phone and they're ready to react.
 
 ## 4. Connect the Chrome extension
 
@@ -25,7 +25,7 @@ The [Chrome extension](extension.html) is what overlays incoming reactions onto 
 
 ## 5. Start a session
 
-A session is one continuous run of your talk, from when you start presenting to when you stop. You start and stop sessions from the extension while you're presenting — not from the dashboard — and every reaction your audience sends while a session is active is recorded against it; outside a session, reactions still float on screen but aren't saved. That record is what powers the analytics you review afterward: which reactions came in, and on which slide. Once you start a session, it appears on your dashboard, where you can check on it during and after your talk, and compare it against past sessions for the same talk.
+A session is one continuous run of your talk, from when you start presenting to when you stop. You start and stop sessions from the extension while you're presenting (not from the dashboard), and every reaction your audience sends while a session is active is recorded against it; outside a session, reactions still float on screen but aren't saved. That record is what powers the analytics you review afterward: which reactions came in, and on which slide. Once you start a session, it appears on your dashboard, where you can check on it during and after your talk, and compare it against past sessions for the same talk.
 
 ## 6. What happens during the talk
 
