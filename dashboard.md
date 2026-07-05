@@ -17,15 +17,21 @@ The dashboard lists every talk you've created, with a form at the top for adding
 
 To delete a talk, select it and use the trash icon next to its name. Deleting a talk removes all of its sessions and reactions too, so double-check before confirming.
 
+![Speechwave dashboard showing the Create a Talk form and a list of talks](/assets/images/screenshot-dashboard-talk-list.png){: width="700" }
+
 ## Finding your talk slug
 
 The slug is the last part of your audience URL (`speechwave.live/t/<slug>`), and it's the one piece of information the browser extension needs to connect to the right talk. Select the talk in your dashboard and look for **"Slug for browser extension"** in its panel. Click the copy icon next to it and paste it straight into the extension.
+
+![Speechwave dashboard talk panel showing the audience URL, QR code, and slug for the browser extension](/assets/images/screenshot-dashboard-talk-panel.png){: width="700" }
 
 ## Finding your API key
 
 Your API key lives on the **Account Settings** page, under **Browser Extension API Key**. It authenticates the extension as you, so paste it in there and keep it private. Use the copy button next to the key field to grab it without mistyping.
 
 Regenerating your key immediately invalidates the old one and disconnects any extension using it. Paste the new key into the extension before it can reconnect. See [troubleshooting](troubleshooting.html) if reactions stop showing up after a regeneration.
+
+![Speechwave Account Settings page showing the Browser Extension API Key field](/assets/images/screenshot-account-settings-api-key.png){: width="700" }
 
 ## Sessions
 
@@ -42,6 +48,8 @@ You can rename or delete a session from this list; deleting removes its recorded
 Click **Analytics** next to any session to see how your audience reacted. The page shows the session's total reaction count, then breaks reactions down slide by slide, with a count for each emoji your audience sent on that slide, so you can see exactly which moments landed.
 
 If your talk has more than one session, you can also compare two sessions of the same talk side by side, with each session's slide-by-slide breakdown shown next to the other. That's a quick way to see how a reworked section of your talk performed against an earlier run.
+
+![Speechwave session analytics page showing a slide-by-slide breakdown of reactions](/assets/images/screenshot-session-analytics.png){: width="700" }
 
 ## Plan usage
 
