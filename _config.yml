@@ -5,6 +5,12 @@ description: >-
 url: "https://docs.speechwave.live"
 baseurl: ""
 
+# Jekyll's default dev server port (4000) collides with the Speechwave app's
+# default `mix phx.server` port, so a dev running both locally at once needs
+# one of them moved. Pinned here rather than passed as a --port flag so it's
+# the same for everyone without extra setup.
+port: 4001
+
 theme: just-the-docs
 logo: "/assets/images/logo.svg"
 color_scheme: speechwave
