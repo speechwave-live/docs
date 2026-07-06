@@ -5,22 +5,34 @@ nav_order: 1
 
 # Speechwave
 
-Speechwave lets your audience send live emoji reactions from their phones during your talk. The reactions float up over your slides in real time, so you can see how the room is responding as you speak.
+Speechwave lets your audience send live emoji reactions from their phones
+during your talk. The reactions float up over your slides in real time, driving
+continuous engagement and giving you real-time analytics so you can improve
+your talk.
 
 ## The three pieces
 
 Speechwave has three parts that work together.
 
 **Audience mobile view**
-Your audience opens your talk's link (`https://speechwave.live/t/<your-talk-slug>`) on their phone, or scans a QR code you display on screen. There's nothing to install and no account to create. They just open the page and start tapping emoji.
+Your audience opens your talk's link
+(`https://speechwave.live/t/<your-talk-slug>`) on their phone, or scans a QR
+code you display on screen. There's nothing to install and no account to
+create. They just open the page and start tapping emoji.
 
-![Speechwave audience view on a phone, showing a floating reaction and a grid of emoji to tap](/assets/images/screenshot-audience-view.png){: width="320" }
+![Speechwave audience view on a phone, showing a floating reaction and a grid
+of emoji to tap](/assets/images/screenshot-audience-view.png){: width="320" }
 
 **Speaker dashboard & analytics**
-This is where you manage your talks. Create a talk to get a QR code and link to share with your audience, and find the talk slug and API key you'll need to connect the Chrome extension. After you present, come back here to review your session analytics. See [Speaker dashboard & analytics](dashboard.html).
+This is where you manage your talks. Create a talk to get a QR code and link to
+share with your audience, then find the talk slug and API key you'll need to
+connect the Chrome extension. After you present, come back here to review your
+session analytics. See [Speaker dashboard & analytics](dashboard.html).
 
 **Chrome extension**
-The extension runs on your laptop while you present, overlaying incoming reactions onto your Google Slides presentation as they arrive, right where your audience is already looking. See [Chrome extension](extension.html).
+The extension runs on your laptop while you present, overlaying incoming
+reactions onto your Google Slides presentation as they arrive, right where your
+audience is already looking. See [Chrome extension](extension.html).
 
 ## How a talk flows
 
