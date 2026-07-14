@@ -1,0 +1,237 @@
+// Speechwave codebase explainer — shared styles for chapter pages.
+// Ported from the retired docs/explainer/index.html; scoped to
+// explainer-only classes so it doesn't affect the rest of the theme.
+
+:root {
+  --explainer-bg-dark: #0f172a;
+  --explainer-bg-mid: #1e293b;
+  --explainer-border: #334155;
+  --explainer-accent: #7c3aed;
+  --explainer-accent-light: #a78bfa;
+  --explainer-accent-dim: #1e1b4b33;
+  --explainer-text-bright: #f1f5f9;
+  --explainer-text-subtle: #94a3b8;
+}
+
+/* Chapter header */
+.chapter-eyebrow {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--explainer-accent);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  margin-bottom: 7px;
+}
+.chapter-lead {
+  font-size: 16px;
+  color: #475569;
+  line-height: 1.7;
+  margin-bottom: 36px;
+  max-width: 620px;
+}
+
+/* Code blocks */
+.code-block {
+  background: var(--explainer-bg-dark);
+  border: 1px solid var(--explainer-border);
+  border-radius: 8px;
+  padding: 18px 20px;
+  font-family: 'JetBrains Mono', 'Fira Code', 'SF Mono', monospace;
+  font-size: 12.5px;
+  line-height: 1.75;
+  margin: 16px 0 24px;
+  overflow-x: auto;
+  color: #e2e8f0;
+  white-space: pre;
+}
+.code-block .kw { color: #c084fc; }
+.code-block .fn { color: #60a5fa; }
+.code-block .str { color: #34d399; }
+.code-block .cm { color: #94a3b8; font-style: italic; }
+.code-block .at { color: #fbbf24; }
+.code-block .num { color: #fb923c; }
+.code-block .label { display: block; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #475569; margin-bottom: 10px; }
+
+/* Callout */
+.callout {
+  border-left: 3px solid var(--explainer-accent);
+  background: var(--explainer-accent-dim);
+  border-radius: 0 8px 8px 0;
+  padding: 14px 18px;
+  margin: 16px 0 24px;
+}
+.callout-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--explainer-accent);
+  letter-spacing: 0.06em;
+  margin-bottom: 6px;
+}
+.callout p { font-size: 13px; color: #475569; margin: 0; line-height: 1.65; }
+.callout code { background: #c4b5fd22; }
+
+/* Schema table */
+.schema-table { width: 100%; border-collapse: collapse; font-size: 13px; margin: 12px 0 28px; }
+.schema-table th {
+  background: var(--explainer-bg-dark);
+  color: var(--explainer-text-subtle);
+  padding: 9px 14px;
+  text-align: left;
+  font-weight: 600;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.schema-table td { padding: 9px 14px; border-bottom: 1px solid #e2e8f0; color: #334155; vertical-align: top; }
+.schema-table tr:last-child td { border-bottom: none; }
+.schema-table .field { font-family: monospace; color: var(--explainer-accent); font-size: 12px; }
+.schema-table .type { color: #64748b; font-family: monospace; font-size: 11px; }
+
+/* Architecture diagram */
+.arch-diagram {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 28px 20px;
+  background: var(--explainer-bg-dark);
+  border-radius: 10px;
+  border: 1px solid var(--explainer-border);
+  margin: 16px 0 24px;
+  flex-wrap: wrap;
+  row-gap: 16px;
+}
+.arch-node {
+  background: var(--explainer-bg-mid);
+  border: 1px solid var(--explainer-border);
+  border-radius: 8px;
+  padding: 12px 18px;
+  text-align: center;
+  min-width: 110px;
+}
+.arch-node-emoji { font-size: 22px; display: block; margin-bottom: 4px; }
+.arch-node-label { font-size: 11px; font-weight: 600; color: var(--explainer-text-bright); display: block; }
+.arch-node-sub { font-size: 10px; color: var(--explainer-text-subtle); display: block; margin-top: 2px; }
+.arch-node.highlight { border-color: var(--explainer-accent); background: #1e1b4b; }
+.arch-arrow {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0 10px;
+  gap: 2px;
+}
+.arch-arrow-line { font-size: 18px; color: var(--explainer-accent); line-height: 1; }
+.arch-arrow-label { font-size: 9px; color: var(--explainer-text-subtle); text-align: center; max-width: 80px; line-height: 1.3; }
+
+/* Stepper (interactive step-through, used by the Emoji journey chapter) */
+.stepper {
+  background: var(--explainer-bg-dark);
+  border-radius: 10px;
+  border: 1px solid var(--explainer-border);
+  margin: 20px 0 28px;
+  overflow: hidden;
+}
+.stepper-header {
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--explainer-border);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.stepper-title { font-size: 12px; font-weight: 600; color: var(--explainer-text-subtle); flex: 1; }
+.stepper-dots { display: flex; gap: 5px; }
+.stepper-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--explainer-border); transition: background 0.2s; }
+.stepper-dot.active { background: var(--explainer-accent); }
+.stepper-dot.done { background: #4c1d95; }
+.stepper-body { padding: 22px 20px 18px; }
+.stepper-step { display: none; }
+.stepper-step.active { display: block; }
+.step-title { font-size: 14px; font-weight: 600; color: var(--explainer-text-bright); margin-bottom: 14px; }
+.step-diagram {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  row-gap: 8px;
+}
+.node {
+  background: var(--explainer-bg-mid);
+  border: 1px solid var(--explainer-border);
+  border-radius: 6px;
+  padding: 7px 13px;
+  font-size: 11.5px;
+  color: #e2e8f0;
+  text-align: center;
+  transition: opacity 0.2s;
+}
+.node.active { background: #4c1d95; border-color: var(--explainer-accent); color: white; font-weight: 600; }
+.node.dim { opacity: 0.3; }
+.arrow { color: var(--explainer-accent); font-size: 15px; flex-shrink: 0; }
+.step-desc { font-size: 13px; color: var(--explainer-text-subtle); line-height: 1.7; }
+.step-desc code { background: #1e293b; color: var(--explainer-accent-light); }
+.stepper-footer {
+  padding: 12px 20px;
+  border-top: 1px solid var(--explainer-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.step-counter { font-size: 11px; color: #94a3b8; }
+.step-btns { display: flex; gap: 8px; }
+.btn-step {
+  padding: 6px 16px;
+  font-size: 12px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background 0.12s;
+}
+.btn-prev { background: var(--explainer-bg-mid); color: var(--explainer-text-subtle); }
+.btn-prev:hover { background: var(--explainer-border); }
+.btn-prev:disabled { opacity: 0.4; cursor: default; }
+.btn-next { background: var(--explainer-accent); color: white; }
+.btn-next:hover { background: #6d28d9; }
+
+/* Collapsible */
+.collapsible { border: 1px solid #e2e8f0; border-radius: 8px; margin: 12px 0; overflow: hidden; }
+.collapsible-trigger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #334155;
+  cursor: pointer;
+  background: #f8fafc;
+  user-select: none;
+}
+.collapsible-trigger:hover { background: #f1f5f9; }
+.collapsible-icon { font-size: 12px; color: var(--explainer-accent); transition: transform 0.2s; flex-shrink: 0; }
+.collapsible.open .collapsible-icon { transform: rotate(90deg); }
+.collapsible-body { display: none; padding: 14px 16px; background: white; font-size: 13px; line-height: 1.7; color: #475569; border-top: 1px solid #e2e8f0; }
+.collapsible.open .collapsible-body { display: block; }
+
+/* Divider */
+.divider { border: none; border-top: 1px solid #e2e8f0; margin: 32px 0; }
+
+/* Two-column info cards */
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 16px 0 24px; }
+.info-card { background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px 18px; }
+.info-card-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--explainer-accent); margin-bottom: 6px; }
+.info-card p { font-size: 12.5px; margin: 0; }
+
+/* Focus styles */
+.btn-step:focus-visible { outline: 2px solid var(--explainer-accent); outline-offset: -2px; }
+.collapsible-trigger:focus-visible { outline: 2px solid var(--explainer-accent); outline-offset: -2px; }
+
+/* Responsive */
+@media (max-width: 700px) {
+  .two-col { grid-template-columns: 1fr; }
+  .step-diagram { flex-direction: column; align-items: flex-start; }
+  .arch-diagram { flex-direction: column; }
+  .arch-arrow { flex-direction: row; }
+  .arch-arrow-line { transform: rotate(90deg); }
+}
