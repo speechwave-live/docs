@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Operators | Speechwave Docs</title>
+<style>
+  @media print { body { font-size: 10pt; } }
+  body {
+    font-family: 'Palatino Linotype', Palatino, 'Book Antiqua', Georgia, serif;
+    max-width: 42em; margin: 2em auto; padding: 0 1.5em;
+    line-height: 1.5; color: #222;
+  }
+  h1 { font-size: 1.6em; border-bottom: 2px solid #333; padding-bottom: 0.3em; margin-bottom: 1.2em; }
+  h2 { font-size: 1.1em; margin-top: 1.8em; color: #555; text-transform: uppercase; letter-spacing: 0.05em; }
+  code { font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace; font-size: 0.88em; background: #f4f4f4; padding: 0.1em 0.3em; border-radius: 3px; }
+  pre { background: #f8f8f8; border-left: 3px solid #4a5568; padding: 0.8em 1em; overflow-x: auto; font-size: 0.85em; font-family: 'SF Mono', 'Fira Code', monospace; line-height: 1.4; }
+  pre code { background: none; padding: 0; }
+  table { border-collapse: collapse; width: 100%; margin: 0.8em 0; }
+  th, td { border: 1px solid #e2e8f0; padding: 0.4em 0.7em; text-align: left; font-size: 0.88em; }
+  th { background: #f7fafc; font-weight: bold; }
+  .note { color: #718096; font-size: 0.88em; margin-top: 0.3em; }
+  .back-nav { display: block; font-size: 0.85em; color: #718096; text-decoration: none; margin-bottom: 1.5em; }
+  .back-nav:hover { color: #4a5568; }
+</style>
+</head>
+<body>
+<a class="back-nav" href="https://docs.speechwave.live/">&larr; docs.speechwave.live</a>
+
+<h1>Operators</h1>
+
+<h2>Arrow-like operators</h2>
+
+<table>
+<tr><th>Operator</th><th>Name</th><th>Read as</th><th>Where</th></tr>
+<tr><td><code>=</code></td><td>Match</td><td>"matches"</td><td>Everywhere</td></tr>
+<tr><td><code>=&gt;</code></td><td>Map arrow</td><td>"maps to"</td><td>Map literals</td></tr>
+<tr><td><code>-&gt;</code></td><td>Clause arrow</td><td>"then"</td><td><code>case</code>, <code>cond</code>, <code>fn</code></td></tr>
+<tr><td><code>&lt;-</code></td><td>Generator</td><td>"drawn from"</td><td><code>for</code>, <code>with</code></td></tr>
+<tr><td><code>|&gt;</code></td><td>Pipe</td><td>"then pass to"</td><td>Anywhere</td></tr>
+</table>
+
+<h2><code>=</code>: match</h2>
+
+<pre><code>x = 42                         # bind x to 42
+{:ok, result} = {:ok, 42}      # destructure: result is 42
+{:ok, _} = some_function()     # assert success, discard value
+^x = 42                        # pin: assert x is already 42</code></pre>
+
+<h2><code>=&gt;</code>: map key-value separator</h2>
+
+<pre><code>%{"id" => id}                  # string key (common in params)
+%{name: "Tracy"}               # atom key shorthand (same as %{name: => "Tracy"})
+%{1 => "one", 2 => "two"}     # any term as key</code></pre>
+
+<p class="note">Atom keys get the <code>key: value</code> shorthand, so you rarely see <code>=&gt;</code> with atoms. String-keyed maps (from JSON, form params) always use <code>=&gt;</code>.</p>
+
+<h2><code>-&gt;</code>: clause arrow</h2>
+
+<p>Separates a pattern from its body. Read as "then."</p>
+
+<pre><code># In case
+case Talks.get_talk_by_slug(slug) do
+  nil  -> {:ok, redirect(socket, to: "/")}
+  talk -> {:ok, assign(socket, talk: talk)}
+end
+
+# In anonymous functions
+fn x -> x * 2 end
+
+# In cond
+cond do
+  count > 10 -> "many"
+  count > 0  -> "some"
+  true       -> "none"
+end</code></pre>
+
+<h2><code>&lt;-</code>: generator</h2>
+
+<p>Draws values from a collection or matches fallible results.</p>
+
+<pre><code># In for comprehensions (loop)
+for talk <- talks do
+  talk.title
+end
+
+# In with (chain fallible operations)
+with {:ok, user} <- find_user(email),
+     {:ok, token} <- generate_token(user) do
+  send_email(user, token)
+else
+  {:error, reason} -> handle_error(reason)
+end</code></pre>
+
+<h2><code>|&gt;</code>: pipe</h2>
+
+<pre><code># Passes left side as FIRST argument to right side
+title |> String.downcase() |> String.trim()
+
+# Equivalent to:
+String.trim(String.downcase(title))</code></pre>
+
+<h2>Other common operators</h2>
+
+<table>
+<tr><th>Operator</th><th>Purpose</th><th>Example</th></tr>
+<tr><td><code>^</code></td><td>Pin (don't rebind)</td><td><code>^x = 5</code> asserts <code>x</code> is <code>5</code></td></tr>
+<tr><td><code>&amp;</code></td><td>Capture (make anonymous fn)</td><td><code>&amp; &amp;1.name</code> → <code>fn x -> x.name end</code></td></tr>
+<tr><td><code>&lt;&gt;</code></td><td>String concatenation</td><td><code>"hello" &lt;&gt; " world"</code></td></tr>
+<tr><td><code>++</code></td><td>List concatenation</td><td><code>[1, 2] ++ [3, 4]</code></td></tr>
+<tr><td><code>..</code></td><td>Range</td><td><code>1..10</code></td></tr>
+<tr><td><code>&&</code> / <code>||</code></td><td>Boolean (short-circuit)</td><td><code>user && user.name</code></td></tr>
+<tr><td><code>and</code> / <code>or</code></td><td>Strict boolean</td><td>Only accept <code>true</code>/<code>false</code></td></tr>
+<tr><td><code>!</code> / <code>not</code></td><td>Negation</td><td><code>!nil</code> → <code>true</code>; <code>not false</code> → <code>true</code></td></tr>
+<tr><td><code>in</code></td><td>Membership</td><td><code>x in [:a, :b, :c]</code></td></tr>
+<tr><td><code>\\</code></td><td>Default argument</td><td><code>def foo(x \\ 42)</code>: <code>x</code> defaults to <code>42</code></td></tr>
+<tr><td><code>::</code></td><td>Bitstring spec</td><td><code>&lt;&lt;x::integer-16&gt;&gt;</code></td></tr>
+</table>
+
+<p class="note"><code>&&</code>/<code>||</code> accept any truthy/falsy value (only <code>nil</code> and <code>false</code> are falsy). <code>and</code>/<code>or</code> require strict <code>true</code>/<code>false</code> and raise otherwise.</p>
+
+</body>
+</html>

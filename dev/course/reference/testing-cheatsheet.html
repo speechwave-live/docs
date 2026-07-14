@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ExUnit testing cheatsheet | Speechwave Docs</title>
+<style>
+  @media print { body { font-size: 10pt; } }
+  body {
+    font-family: 'Palatino Linotype', Palatino, 'Book Antiqua', Georgia, serif;
+    max-width: 42em; margin: 2em auto; padding: 0 1.5em;
+    line-height: 1.5; color: #222;
+  }
+  h1 { font-size: 1.6em; border-bottom: 2px solid #333; padding-bottom: 0.3em; margin-bottom: 1.2em; }
+  h2 { font-size: 1.1em; margin-top: 1.8em; color: #555; text-transform: uppercase; letter-spacing: 0.05em; }
+  code { font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace; font-size: 0.88em; background: #f4f4f4; padding: 0.1em 0.3em; border-radius: 3px; }
+  pre { background: #f8f8f8; border-left: 3px solid #4a5568; padding: 0.8em 1em; overflow-x: auto; font-size: 0.85em; font-family: 'SF Mono', 'Fira Code', monospace; line-height: 1.4; }
+  pre code { background: none; padding: 0; }
+  table { border-collapse: collapse; width: 100%; margin: 0.8em 0; }
+  th, td { border: 1px solid #e2e8f0; padding: 0.4em 0.7em; text-align: left; font-size: 0.88em; }
+  th { background: #f7fafc; font-weight: bold; }
+  .note { color: #718096; font-size: 0.88em; margin-top: 0.3em; }
+  .back-nav { display: block; font-size: 0.85em; color: #718096; text-decoration: none; margin-bottom: 1.5em; }
+  .back-nav:hover { color: #4a5568; }
+</style>
+</head>
+<body>
+<a class="back-nav" href="https://docs.speechwave.live/">&larr; docs.speechwave.live</a>
+
+<h1>ExUnit testing cheatsheet</h1>
+
+<h2>Running tests</h2>
+
+<pre><code>mix test                                    # all tests
+mix test test/speechwave/talks_test.exs     # one file
+mix test test/speechwave/talks_test.exs:48  # one test (by line)
+mix test --trace                            # verbose (show names)
+mix test --failed                           # re-run only failures</code></pre>
+
+<h2>Test structure</h2>
+
+<pre><code>defmodule MyApp.SomeTest do
+  use MyApp.DataCase              # or ConnCase for web tests
+
+  import MyApp.SomeFixtures       # factory functions
+
+  setup do
+    thing = thing_fixture()
+    %{thing: thing}               # returned map → test context
+  end
+
+  describe "function_name/arity" do
+    test "description", %{thing: thing} do
+      assert thing.field == "value"
+    end
+  end
+end</code></pre>
+
+<h2>Assertions</h2>
+
+<table>
+<tr><th>Assertion</th><th>Checks</th></tr>
+<tr><td><code>assert x == y</code></td><td>Equality</td></tr>
+<tr><td><code>assert x</code></td><td>Truthy</td></tr>
+<tr><td><code>refute x</code></td><td>Falsy</td></tr>
+<tr><td><code>assert {:ok, val} = expr</code></td><td>Pattern match succeeds, binds <code>val</code></td></tr>
+<tr><td><code>assert x =~ "sub"</code></td><td>String contains / regex match</td></tr>
+<tr><td><code>assert x in list</code></td><td>Membership</td></tr>
+<tr><td><code>assert_raise Error, fn -> ... end</code></td><td>Exception raised</td></tr>
+<tr><td><code>assert_receive msg, timeout</code></td><td>Message in process mailbox</td></tr>
+<tr><td><code>refute_receive msg, timeout</code></td><td>No such message received</td></tr>
+</table>
+
+<h2>Changeset testing</h2>
+
+<pre><code># errors_on/1 comes from DataCase
+assert {:error, cs} = create_thing(%{name: nil})
+assert "can't be blank" in errors_on(cs).name
+
+# Checking validity without inserting
+cs = Thing.changeset(%Thing{}, %{name: "valid"})
+assert cs.valid?</code></pre>
+
+<h2>LiveView testing</h2>
+
+<pre><code>import Phoenix.LiveViewTest
+
+# Mount
+{:ok, view, html} = live(conn, "/path")
+
+# Click
+render_click(view, "event_name", %{"key" => "val"})
+view |> element("#btn") |> render_click()
+view |> element("button", "Button Text") |> render_click()
+
+# Form
+view |> form("#form-id", data: %{field: "val"}) |> render_submit()
+view |> element("#form-id") |> render_change(%{"data" => %{"field" => "val"}})
+
+# DOM assertions
+assert has_element?(view, "#element-id")
+assert has_element?(view, "#element-id", "text content")
+refute has_element?(view, "#element-id")
+assert render(view) =~ "some text"
+
+# Redirect on mount
+assert {:error, {:redirect, %{to: path}}} = live(conn, "/path")</code></pre>
+
+<h2>PubSub testing</h2>
+
+<pre><code># Subscribe from test process
+Phoenix.PubSub.subscribe(MyApp.PubSub, "topic")
+
+# Trigger action
+render_click(view, "event", %{})
+
+# Assert broadcast received
+assert_receive %Phoenix.Socket.Broadcast{
+  event: "event_name",
+  payload: %{key: value}
+}, 500
+
+# Assert NOT received (e.g., rate limited)
+refute_receive %Phoenix.Socket.Broadcast{event: "event_name"}, 200</code></pre>
+
+<h2>Base cases</h2>
+
+<table>
+<tr><th>Base</th><th>Use for</th><th>Provides</th></tr>
+<tr><td><code>DataCase</code></td><td>Context / schema tests</td><td>DB sandbox, Ecto imports, <code>errors_on/1</code></td></tr>
+<tr><td><code>ConnCase</code></td><td>Controller / LiveView tests</td><td>DB sandbox + <code>conn</code>, <code>log_in_user/2</code></td></tr>
+<tr><td><code>ChannelCase</code></td><td>Channel tests</td><td>DB sandbox + channel helpers</td></tr>
+</table>
+
+</body>
+</html>

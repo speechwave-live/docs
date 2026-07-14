@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pipe operator and Enum cheatsheet | Speechwave Docs</title>
+<style>
+  @media print { body { font-size: 10pt; } }
+  body {
+    font-family: 'Palatino Linotype', Palatino, 'Book Antiqua', Georgia, serif;
+    max-width: 42em; margin: 2em auto; padding: 0 1.5em;
+    line-height: 1.5; color: #222;
+  }
+  h1 { font-size: 1.6em; border-bottom: 2px solid #333; padding-bottom: 0.3em; margin-bottom: 1.2em; }
+  h2 { font-size: 1.1em; margin-top: 1.8em; color: #555; text-transform: uppercase; letter-spacing: 0.05em; }
+  code { font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace; font-size: 0.88em; background: #f4f4f4; padding: 0.1em 0.3em; border-radius: 3px; }
+  pre { background: #f8f8f8; border-left: 3px solid #4a5568; padding: 0.8em 1em; overflow-x: auto; font-size: 0.88em; font-family: 'SF Mono', 'Fira Code', monospace; line-height: 1.4; }
+  pre code { background: none; padding: 0; }
+  table { border-collapse: collapse; width: 100%; margin: 0.8em 0; }
+  th, td { border: 1px solid #e2e8f0; padding: 0.4em 0.7em; text-align: left; font-size: 0.9em; }
+  th { background: #f7fafc; font-weight: bold; }
+  .note { color: #718096; font-size: 0.88em; }
+  .back-nav { display: block; font-size: 0.85em; color: #718096; text-decoration: none; margin-bottom: 1.5em; }
+  .back-nav:hover { color: #4a5568; }
+</style>
+</head>
+<body>
+<a class="back-nav" href="https://docs.speechwave.live/">&larr; docs.speechwave.live</a>
+
+<h1>Pipe operator and Enum cheatsheet</h1>
+
+<h2>Pipe operator <code>|&gt;</code></h2>
+
+<pre><code># Rule: left result becomes the FIRST argument on the right
+x |> f(a, b)   ≡   f(x, a, b)
+
+# Chain reads top-to-bottom
+data
+|> step_one()
+|> step_two(extra_arg)
+|> step_three()</code></pre>
+
+<h2>Capture operator <code>&amp;</code></h2>
+
+<table>
+<tr><th>Shorthand</th><th>Expands to</th></tr>
+<tr><td><code>&amp; &amp;1.name</code></td><td><code>fn x -> x.name end</code></td></tr>
+<tr><td><code>&amp;(&amp;1 + &amp;2)</code></td><td><code>fn x, y -> x + y end</code></td></tr>
+<tr><td><code>&amp;String.upcase/1</code></td><td><code>fn x -> String.upcase(x) end</code></td></tr>
+<tr><td><code>&amp;to_string/1</code></td><td><code>fn x -> to_string(x) end</code></td></tr>
+</table>
+
+<h2>Enum: most used functions</h2>
+
+<table>
+<tr><th>Elixir</th><th>Ruby</th><th>Returns</th></tr>
+<tr><td><code>Enum.map(list, fun)</code></td><td><code>.map</code></td><td>list</td></tr>
+<tr><td><code>Enum.filter(list, fun)</code></td><td><code>.select</code></td><td>list</td></tr>
+<tr><td><code>Enum.reject(list, fun)</code></td><td><code>.reject</code></td><td>list</td></tr>
+<tr><td><code>Enum.find(list, fun)</code></td><td><code>.find / .detect</code></td><td>element or nil</td></tr>
+<tr><td><code>Enum.reduce(list, acc, fun)</code></td><td><code>.inject / .reduce</code></td><td>accumulator</td></tr>
+<tr><td><code>Enum.group_by(list, fun)</code></td><td><code>.group_by</code></td><td>map</td></tr>
+<tr><td><code>Enum.sort_by(list, fun)</code></td><td><code>.sort_by</code></td><td>list</td></tr>
+<tr><td><code>Enum.flat_map(list, fun)</code></td><td><code>.flat_map</code></td><td>list</td></tr>
+<tr><td><code>Enum.count(list)</code></td><td><code>.count / .length</code></td><td>integer</td></tr>
+<tr><td><code>Enum.any?(list, fun)</code></td><td><code>.any?</code></td><td>boolean</td></tr>
+<tr><td><code>Enum.all?(list, fun)</code></td><td><code>.all?</code></td><td>boolean</td></tr>
+<tr><td><code>Enum.each(list, fun)</code></td><td><code>.each</code></td><td><code>:ok</code></td></tr>
+<tr><td><code>Enum.into(enum, collectable)</code></td><td><code>.to_h / .to_a</code></td><td>collectable</td></tr>
+<tr><td><code>Enum.zip(list_a, list_b)</code></td><td><code>.zip</code></td><td>list of tuples</td></tr>
+</table>
+
+<h2>Map module: key-value operations</h2>
+
+<table>
+<tr><th>Function</th><th>Does</th></tr>
+<tr><td><code>Map.get(map, key)</code></td><td>Get value, returns nil if missing</td></tr>
+<tr><td><code>Map.get(map, key, default)</code></td><td>Get value with default</td></tr>
+<tr><td><code>Map.put(map, key, value)</code></td><td>Returns new map with key set</td></tr>
+<tr><td><code>Map.delete(map, key)</code></td><td>Returns new map without key</td></tr>
+<tr><td><code>Map.merge(map1, map2)</code></td><td>Merge maps (map2 wins on conflicts)</td></tr>
+<tr><td><code>Map.keys(map)</code></td><td>List of keys</td></tr>
+<tr><td><code>Map.values(map)</code></td><td>List of values</td></tr>
+<tr><td><code>Map.new(enum, fun)</code></td><td>Build map from enumerable</td></tr>
+<tr><td><code>Map.fetch(map, key)</code></td><td><code>{:ok, val}</code> or <code>:error</code></td></tr>
+</table>
+
+<p class="note">Maps are immutable, so every function returns a new map. <code>map.key</code> syntax works for atom keys; <code>map["key"]</code> for string keys.</p>
+
+<h2>Common pipe patterns in Phoenix</h2>
+
+<pre><code># Changeset pipeline (Ecto)
+%Struct{}
+|> Schema.changeset(attrs)
+|> Repo.insert()
+
+# Conn pipeline (controllers/plugs)
+conn
+|> put_session(:user_id, user.id)
+|> put_flash(:info, "Welcome!")
+|> redirect(to: ~p"/dashboard")
+
+# Socket pipeline (LiveView)
+socket
+|> assign(key: value)
+|> assign(other: value2)
+
+# Query pipeline (Ecto)
+from(u in User, where: u.active == true)
+|> order_by([u], desc: u.inserted_at)
+|> Repo.all()</code></pre>
+
+</body>
+</html>

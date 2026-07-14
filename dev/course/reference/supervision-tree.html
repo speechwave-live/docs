@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Supervision tree | Speechwave Docs</title>
+<style>
+  @media print { body { font-size: 10pt; } }
+  body {
+    font-family: 'Palatino Linotype', Palatino, 'Book Antiqua', Georgia, serif;
+    max-width: 42em; margin: 2em auto; padding: 0 1.5em;
+    line-height: 1.5; color: #222;
+  }
+  h1 { font-size: 1.6em; border-bottom: 2px solid #333; padding-bottom: 0.3em; margin-bottom: 1.2em; }
+  h2 { font-size: 1.1em; margin-top: 1.8em; color: #555; text-transform: uppercase; letter-spacing: 0.05em; }
+  code { font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace; font-size: 0.88em; background: #f4f4f4; padding: 0.1em 0.3em; border-radius: 3px; }
+  pre { background: #f8f8f8; border-left: 3px solid #4a5568; padding: 0.8em 1em; overflow-x: auto; font-size: 0.85em; font-family: 'SF Mono', 'Fira Code', monospace; line-height: 1.4; }
+  pre code { background: none; padding: 0; }
+  table { border-collapse: collapse; width: 100%; margin: 0.8em 0; }
+  th, td { border: 1px solid #e2e8f0; padding: 0.4em 0.7em; text-align: left; font-size: 0.88em; }
+  th { background: #f7fafc; font-weight: bold; }
+  .note { color: #718096; font-size: 0.88em; margin-top: 0.3em; }
+  .back-nav { display: block; font-size: 0.85em; color: #718096; text-decoration: none; margin-bottom: 1.5em; }
+  .back-nav:hover { color: #4a5568; }
+</style>
+</head>
+<body>
+<a class="back-nav" href="https://docs.speechwave.live/">&larr; docs.speechwave.live</a>
+
+<h1>Supervision tree</h1>
+
+<p class="note">Defined in <a href="https://github.com/speechwave-live/speechwave/blob/main/lib/speechwave/application.ex"><code>lib/speechwave/application.ex</code></a>. Children start in order, top to bottom. Strategy: <code>:one_for_one</code> (restart only the crashed child).</p>
+
+<h2>Children (boot order)</h2>
+
+<table>
+<tr><th>Child</th><th>What it does</th><th>Why this position</th></tr>
+<tr>
+  <td><code>SpeechwaveWeb.Telemetry</code></td>
+  <td>Collects metrics (request times, VM stats). Powers the <code>/dev/dashboard</code> LiveDashboard graphs.</td>
+  <td>First: so it can observe everything that follows.</td>
+</tr>
+<tr>
+  <td><code>Speechwave.Repo</code></td>
+  <td>Database connection pool (SQLite via Ecto).</td>
+  <td>Must start before anything that queries the DB.</td>
+</tr>
+<tr>
+  <td><code>{DNSCluster, ...}</code></td>
+  <td>Discovers other nodes via DNS for clustering.</td>
+  <td>Disabled in dev (<code>:ignore</code>). Used in production for multi-node discovery.</td>
+</tr>
+<tr>
+  <td><code>{Phoenix.PubSub, ...}</code></td>
+  <td>Publish/subscribe system. <code>TalkLive</code> subscribes to this for real-time emoji broadcasts.</td>
+  <td>Must start before the Endpoint (which depends on it).</td>
+</tr>
+<tr>
+  <td><code>Speechwave.RateLimiter</code></td>
+  <td>GenServer owning the ETS table for emoji tap rate limiting (a short cooldown).</td>
+  <td>Before Endpoint: must be ready when LiveViews start handling taps.</td>
+</tr>
+<tr>
+  <td><code>Speechwave.AuthThrottle</code></td>
+  <td>GenServer owning ETS tables for magic-link email and IP-based login throttling (escalating on repeated attempts).</td>
+  <td>Before Endpoint: must be ready when login requests arrive.</td>
+</tr>
+<tr>
+  <td><code>SpeechwaveWeb.Endpoint</code></td>
+  <td>The HTTP server (Bandit). Listens for connections, handles WebSocket upgrades for LiveView.</td>
+  <td>Near the end: only accepts traffic when everything above is ready.</td>
+</tr>
+<tr>
+  <td><code>SpeechwaveWeb.Presence</code></td>
+  <td>Tracks connected users per topic (built on PubSub). Used for audience counts.</td>
+  <td>After Endpoint and PubSub are running.</td>
+</tr>
+<tr>
+  <td><code>Speechwave.DbBackup</code></td>
+  <td>Periodic SQLite backup to S3 (5 min initial delay, then hourly).</td>
+  <td><strong>Conditional</strong>: only added once storage is configured (production only).</td>
+</tr>
+</table>
+
+<h2>Supervision strategies</h2>
+
+<table>
+<tr><th>Strategy</th><th>On child crash</th></tr>
+<tr><td><code>:one_for_one</code></td><td>Restart only the crashed child (Speechwave uses this)</td></tr>
+<tr><td><code>:one_for_all</code></td><td>Restart all children</td></tr>
+<tr><td><code>:rest_for_one</code></td><td>Restart the crashed child and all children started after it</td></tr>
+</table>
+
+<h2>Child spec formats</h2>
+
+<pre><code># Module name: calls Module.start_link([])
+Speechwave.RateLimiter
+
+# Tuple: passes options to Module.start_link(opts)
+{Phoenix.PubSub, name: Speechwave.PubSub}
+
+# Conditional children
+if condition, do: [Speechwave.DbBackup], else: []</code></pre>
+
+</body>
+</html>

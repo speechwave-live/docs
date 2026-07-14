@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Accessing docs | Speechwave Docs</title>
+<style>
+  @media print { body { font-size: 10pt; } }
+  body {
+    font-family: 'Palatino Linotype', Palatino, 'Book Antiqua', Georgia, serif;
+    max-width: 42em; margin: 2em auto; padding: 0 1.5em;
+    line-height: 1.5; color: #222;
+  }
+  h1 { font-size: 1.6em; border-bottom: 2px solid #333; padding-bottom: 0.3em; margin-bottom: 1.2em; }
+  h2 { font-size: 1.1em; margin-top: 1.8em; color: #555; text-transform: uppercase; letter-spacing: 0.05em; }
+  code { font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace; font-size: 0.88em; background: #f4f4f4; padding: 0.1em 0.3em; border-radius: 3px; }
+  pre { background: #f8f8f8; border-left: 3px solid #4a5568; padding: 0.8em 1em; overflow-x: auto; font-size: 0.88em; font-family: 'SF Mono', 'Fira Code', monospace; line-height: 1.4; }
+  pre code { background: none; padding: 0; }
+  table { border-collapse: collapse; width: 100%; margin: 0.8em 0; }
+  th, td { border: 1px solid #e2e8f0; padding: 0.4em 0.7em; text-align: left; font-size: 0.9em; }
+  th { background: #f7fafc; font-weight: bold; }
+  .note { color: #718096; font-size: 0.88em; margin-top: 0.3em; }
+  .back-nav { display: block; font-size: 0.85em; color: #718096; text-decoration: none; margin-bottom: 1.5em; }
+  .back-nav:hover { color: #4a5568; }
+</style>
+</head>
+<body>
+<a class="back-nav" href="https://docs.speechwave.live/">&larr; docs.speechwave.live</a>
+
+<h1>Accessing docs</h1>
+
+<h2>IEx (interactive Elixir)</h2>
+
+<p>Start IEx with your project loaded so all dependencies are available:</p>
+
+<pre><code>cd ~/projects/speechwave-live/speechwave
+iex -S mix</code></pre>
+
+<p>Then use the <code>h</code> helper:</p>
+
+<pre><code>h Enum.map                # docs for a specific function
+h Enum.map/2              # docs for a specific arity
+h Phoenix.LiveView        # module-level docs
+h Phoenix.Component.assign # fully qualified name: check the source module</code></pre>
+
+<p>Other useful IEx helpers:</p>
+
+<table>
+<tr><th>Helper</th><th>Does</th></tr>
+<tr><td><code>h Module</code></td><td>Module docs (<code>@moduledoc</code>)</td></tr>
+<tr><td><code>h Module.func</code></td><td>Function docs (<code>@doc</code>)</td></tr>
+<tr><td><code>t Module</code></td><td>List types defined by the module</td></tr>
+<tr><td><code>b Module</code></td><td>List callbacks (for behaviours like GenServer)</td></tr>
+<tr><td><code>i value</code></td><td>Info about a value (type, module, etc.)</td></tr>
+<tr><td><code>exports Module</code></td><td>List all public functions and their arities</td></tr>
+</table>
+
+<p class="note">Tab completion works in IEx. Type <code>Enum.</code> and press Tab to see all functions.</p>
+
+<h2>Offline docs via Mix</h2>
+
+<pre><code># Download docs for a dependency
+mix hex.docs fetch phoenix_live_view
+
+# Open in browser (with search)
+mix hex.docs offline phoenix_live_view
+
+# Other common packages
+mix hex.docs offline phoenix
+mix hex.docs offline ecto
+mix hex.docs offline ecto_sql
+
+# Switch a package back to online docs
+mix hex.docs online phoenix_live_view</code></pre>
+
+<p class="note">Fetched docs are cached locally, so you only download once per version.</p>
+
+<h2>Online docs</h2>
+
+<table>
+<tr><th>Package</th><th>URL</th></tr>
+<tr><td>Elixir standard library</td><td><a href="https://hexdocs.pm/elixir/">hexdocs.pm/elixir</a></td></tr>
+<tr><td>Phoenix</td><td><a href="https://hexdocs.pm/phoenix/">hexdocs.pm/phoenix</a></td></tr>
+<tr><td>Phoenix LiveView</td><td><a href="https://hexdocs.pm/phoenix_live_view/">hexdocs.pm/phoenix_live_view</a></td></tr>
+<tr><td>Ecto</td><td><a href="https://hexdocs.pm/ecto/">hexdocs.pm/ecto</a></td></tr>
+<tr><td>Any hex package</td><td><code>hexdocs.pm/&lt;package_name&gt;</code></td></tr>
+</table>
+
+</body>
+</html>

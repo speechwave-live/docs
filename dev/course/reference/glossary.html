@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Elixir glossary | Speechwave Docs</title>
+<style>
+  @media print { body { font-size: 10pt; } }
+  body {
+    font-family: 'Palatino Linotype', Palatino, 'Book Antiqua', Georgia, serif;
+    max-width: 42em; margin: 2em auto; padding: 0 1.5em;
+    line-height: 1.55; color: #222;
+  }
+  h1 { font-size: 1.6em; border-bottom: 2px solid #333; padding-bottom: 0.3em; margin-bottom: 1.2em; }
+  h2 { font-size: 1.1em; margin-top: 1.8em; color: #555; text-transform: uppercase; letter-spacing: 0.05em; }
+  dl { margin: 0; }
+  dt { font-weight: bold; margin-top: 0.8em; color: #1a1a2e; }
+  dd { margin-left: 1.5em; margin-bottom: 0.3em; }
+  code { font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace; font-size: 0.88em; background: #f4f4f4; padding: 0.1em 0.3em; border-radius: 3px; }
+  .ruby { color: #888; font-style: italic; }
+  a { color: #4a5568; }
+  .back-nav { display: block; font-size: 0.85em; color: #718096; text-decoration: none; margin-bottom: 1.5em; }
+  .back-nav:hover { color: #4a5568; }
+</style>
+</head>
+<body>
+<a class="back-nav" href="https://docs.speechwave.live/">&larr; docs.speechwave.live</a>
+<h1>Elixir glossary</h1>
+<p>Terms you'll encounter in the Speechwave codebase. Ruby equivalents noted where helpful.</p>
+
+<h2>Language fundamentals</h2>
+<dl>
+  <dt>Atom</dt>
+  <dd>A constant whose name is its value: <code>:ok</code>, <code>:error</code>, <code>true</code>. <span class="ruby">Ruby: same concept, same syntax.</span></dd>
+
+  <dt>Pattern matching</dt>
+  <dd>The <code>=</code> operator doesn't assign, it <em>matches</em> the left side against the right. <code>{:ok, result} = {:ok, 42}</code> binds <code>result</code> to <code>42</code>. If sides don't match, it raises <code>MatchError</code>. <span class="ruby">Ruby: no equivalent, closest is destructuring in JS.</span></dd>
+
+  <dt>Pin operator (<code>^</code>)</dt>
+  <dd>Forces a variable to be matched against its existing value rather than rebound. <code>^x = 5</code> asserts that <code>x</code> is <code>5</code>.</dd>
+
+  <dt>Pipe operator (<code>|&gt;</code>)</dt>
+  <dd>Passes the result of the left expression as the <em>first argument</em> to the function on the right. <code>data |&gt; transform() |&gt; save()</code>. <span class="ruby">Ruby: like method chaining, but for free functions.</span></dd>
+
+  <dt>Guard clause</dt>
+  <dd>A <code>when</code> condition on a function head that restricts when that clause matches: <code>def foo(x) when is_integer(x)</code>.</dd>
+
+  <dt>Sigil</dt>
+  <dd>A <code>~</code> prefix for literal syntax: <code>~r/regex/</code>, <code>~w(word list)</code>, <code>~T[12:00:00]</code>.</dd>
+
+  <dt>Struct</dt>
+  <dd>A map with a fixed set of keys and a name, defined with <code>defstruct</code>. <code>%Talk{slug: "demo"}</code>. <span class="ruby">Ruby: like <code>Struct.new(:slug)</code> but enforced at compile time.</span></dd>
+</dl>
+
+<h2>Modules &amp; functions</h2>
+<dl>
+  <dt>Module</dt>
+  <dd>A namespace for functions, defined with <code>defmodule</code>. No instances, no state. <span class="ruby">Ruby: like a module with only class methods, no <code>self</code> state.</span></dd>
+
+  <dt><code>def</code> / <code>defp</code></dt>
+  <dd>Public / private function. Multiple clauses of the same function with different patterns are tried top-to-bottom.</dd>
+
+  <dt><code>use</code></dt>
+  <dd>Injects code from another module via its <code>__using__/1</code> macro. <code>use GenServer</code> gives you GenServer callbacks. <span class="ruby">Ruby: like <code>include</code> but can rewrite the including module.</span></dd>
+
+  <dt><code>import</code></dt>
+  <dd>Brings functions from another module into scope so you can call them without the module prefix. <code>import Ecto.Query</code>.</dd>
+
+  <dt><code>alias</code></dt>
+  <dd>Creates a shortcut name for a module. <code>alias Speechwave.Talks.Talk</code> lets you write <code>Talk</code> instead of the full path.</dd>
+
+  <dt><code>@</code> (module attribute)</dt>
+  <dd>A compile-time constant or annotation: <code>@moduledoc</code>, <code>@impl true</code>. <span class="ruby">Ruby: no direct equivalent, partly like class-level constants.</span></dd>
+</dl>
+
+<h2>Phoenix &amp; LiveView</h2>
+<dl>
+  <dt>Socket / <code>socket.assigns</code></dt>
+  <dd>The LiveView state container. <code>assign(socket, key: value)</code> stores data; templates access it as <code>@key</code>. <span class="ruby">Ruby/Rails: like instance variables in a controller, but immutable, you return a new socket.</span></dd>
+
+  <dt><code>mount/3</code></dt>
+  <dd>Called when a LiveView starts. Sets up initial assigns. Returns <code>{:ok, socket}</code>.</dd>
+
+  <dt><code>handle_event/3</code></dt>
+  <dd>Handles a user action from the browser (click, form submit). Returns <code>{:noreply, socket}</code>.</dd>
+
+  <dt><code>handle_info/2</code></dt>
+  <dd>Handles messages from other processes (PubSub broadcasts, timer ticks). Returns <code>{:noreply, socket}</code>.</dd>
+
+  <dt>Context module</dt>
+  <dd>A module that groups related database operations: <code>Speechwave.Talks</code>, <code>Speechwave.Accounts</code>. Phoenix convention for organizing business logic. <span class="ruby">Ruby/Rails: like a Service Object or the Model layer, but explicitly a module of functions.</span></dd>
+
+  <dt>Changeset</dt>
+  <dd>An Ecto struct that tracks proposed changes to data, with validations. You build one, then pass it to <code>Repo.insert/update</code>. <span class="ruby">Ruby/Rails: like ActiveRecord validations, but the validation result is a separate data structure from the record.</span></dd>
+
+  <dt>Scope</dt>
+  <dd>A Speechwave-specific pattern: <code>%Scope{user: user}</code> wraps the authenticated user so context functions always filter by owner.</dd>
+
+  <dt>Plug</dt>
+  <dd>A composable middleware module or function. Plugs are chained in pipelines to process HTTP requests. <span class="ruby">Ruby/Rails: like Rack middleware.</span></dd>
+
+  <dt>Pipeline</dt>
+  <dd>A named sequence of plugs in the router: <code>pipeline :browser do ... end</code>.</dd>
+</dl>
+
+<h2>OTP (just enough)</h2>
+<dl>
+  <dt>Process</dt>
+  <dd>A lightweight, isolated unit of concurrency managed by the BEAM VM. Not an OS process. Thousands can run simultaneously.</dd>
+
+  <dt>Supervisor</dt>
+  <dd>A process that monitors child processes and restarts them on failure. Defined in <a href="https://github.com/speechwave-live/speechwave/blob/main/lib/speechwave/application.ex"><code>application.ex</code></a>.</dd>
+
+  <dt>GenServer</dt>
+  <dd>A generic server process with a standard interface (call/cast/info). Speechwave's <code>RateLimiter</code> and <code>AuthThrottle</code> are GenServers.</dd>
+
+  <dt>PubSub</dt>
+  <dd>Publish-subscribe messaging between processes. Phoenix uses it to push updates to LiveViews in real time.</dd>
+</dl>
+
+</body>
+</html>

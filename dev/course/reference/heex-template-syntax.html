@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HEEx template syntax | Speechwave Docs</title>
+<style>
+  @media print { body { font-size: 10pt; } }
+  body {
+    font-family: 'Palatino Linotype', Palatino, 'Book Antiqua', Georgia, serif;
+    max-width: 42em; margin: 2em auto; padding: 0 1.5em;
+    line-height: 1.5; color: #222;
+  }
+  h1 { font-size: 1.6em; border-bottom: 2px solid #333; padding-bottom: 0.3em; margin-bottom: 1.2em; }
+  h2 { font-size: 1.1em; margin-top: 1.8em; color: #555; text-transform: uppercase; letter-spacing: 0.05em; }
+  code { font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace; font-size: 0.88em; background: #f4f4f4; padding: 0.1em 0.3em; border-radius: 3px; }
+  pre { background: #f8f8f8; border-left: 3px solid #4a5568; padding: 0.8em 1em; overflow-x: auto; font-size: 0.85em; font-family: 'SF Mono', 'Fira Code', monospace; line-height: 1.4; }
+  pre code { background: none; padding: 0; }
+  table { border-collapse: collapse; width: 100%; margin: 0.8em 0; }
+  th, td { border: 1px solid #e2e8f0; padding: 0.4em 0.7em; text-align: left; font-size: 0.88em; }
+  th { background: #f7fafc; font-weight: bold; }
+  .note { color: #718096; font-size: 0.88em; margin-top: 0.3em; }
+  .back-nav { display: block; font-size: 0.85em; color: #718096; text-decoration: none; margin-bottom: 1.5em; }
+  .back-nav:hover { color: #4a5568; }
+</style>
+</head>
+<body>
+<a class="back-nav" href="https://docs.speechwave.live/">&larr; docs.speechwave.live</a>
+
+<h1>HEEx template syntax</h1>
+
+<h2>Outputting values</h2>
+
+<table>
+<tr><th>Syntax</th><th>Meaning</th></tr>
+<tr><td><code>{@variable}</code></td><td>Output an assign value (HTML-escaped)</td></tr>
+<tr><td><code>{expression}</code></td><td>Output any Elixir expression (HTML-escaped)</td></tr>
+<tr><td><code>{"string #{interpolation}"}</code></td><td>Output interpolated string</td></tr>
+</table>
+
+<h2>Control flow</h2>
+
+<pre><code>&lt;%= if @condition do %&gt;
+  ...shown when true...
+&lt;% else %&gt;
+  ...shown when false...
+&lt;% end %&gt;
+
+&lt;%= for item &lt;- @list do %&gt;
+  ...repeated for each item...
+&lt;% end %&gt;
+
+&lt;%= case @value do %&gt;
+  &lt;% :a -&gt; %&gt; ...
+  &lt;% :b -&gt; %&gt; ...
+&lt;% end %&gt;
+
+&lt;%= cond do %&gt;
+  &lt;% @count &gt; 10 -&gt; %&gt; ...
+  &lt;% @count &gt; 0 -&gt; %&gt;  ...
+  &lt;% true -&gt; %&gt;        ...default...
+&lt;% end %&gt;</code></pre>
+
+<p class="note"><code>&lt;%= %&gt;</code> outputs the result. <code>&lt;% %&gt;</code> (no <code>=</code>) executes but doesn't output. <code>&lt;%!-- --%&gt;</code> is an HTML comment that is stripped from output.</p>
+
+<h2>LiveView events</h2>
+
+<table>
+<tr><th>Attribute</th><th>Triggers</th><th>Handler</th></tr>
+<tr><td><code>phx-click="name"</code></td><td>Click</td><td><code>handle_event("name", params, socket)</code></td></tr>
+<tr><td><code>phx-change="name"</code></td><td>Form field change</td><td><code>handle_event("name", params, socket)</code></td></tr>
+<tr><td><code>phx-submit="name"</code></td><td>Form submit</td><td><code>handle_event("name", params, socket)</code></td></tr>
+<tr><td><code>phx-value-key={val}</code></td><td>n/a</td><td>Adds <code>%{"key" =&gt; val}</code> to params</td></tr>
+<tr><td><code>phx-hook="Name"</code></td><td>n/a</td><td>Attaches a JavaScript hook</td></tr>
+<tr><td><code>data-confirm="msg"</code></td><td>n/a</td><td>Shows browser confirm dialog before event</td></tr>
+</table>
+
+<p class="note">Values from <code>phx-value-*</code> are always <strong>strings</strong>. Use <code>String.to_integer/1</code> in the handler if you need an integer.</p>
+
+<h2>Navigation</h2>
+
+<table>
+<tr><th>Attribute</th><th>Behavior</th></tr>
+<tr><td><code>navigate={~p"/path"}</code></td><td>Full LiveView navigation (new mount)</td></tr>
+<tr><td><code>patch={~p"/path"}</code></td><td>Same LiveView, new URL (calls <code>handle_params</code>)</td></tr>
+<tr><td><code>href={~p"/path"}</code></td><td>Traditional full-page navigation</td></tr>
+</table>
+
+<h2>Components</h2>
+
+<pre><code>&lt;!-- Function component (defined in CoreComponents or same module) --&gt;
+&lt;.button&gt;Click me&lt;/.button&gt;
+&lt;.input field={@form[:title]} type="text" /&gt;
+&lt;.icon name="hero-trash" class="w-4 h-4" /&gt;
+
+&lt;!-- Module component --&gt;
+&lt;Layouts.app flash={@flash}&gt;
+  ...content...
+&lt;/Layouts.app&gt;
+
+&lt;!-- Form component --&gt;
+&lt;.form for={@form} phx-change="validate" phx-submit="save"&gt;
+  &lt;.input field={@form[:email]} type="email" /&gt;
+  &lt;button type="submit"&gt;Save&lt;/button&gt;
+&lt;/.form&gt;
+
+&lt;!-- Link component --&gt;
+&lt;.link navigate={~p"/dashboard"}&gt;Dashboard&lt;/.link&gt;
+&lt;.link href={~p"/users/log-out"} method="delete"&gt;Log out&lt;/.link&gt;</code></pre>
+
+<p class="note"><code>.component</code> (with dot) = function component. <code>Module.component</code> = component from another module. Both receive attributes as assigns.</p>
+
+<h2>Dynamic attributes</h2>
+
+<pre><code>&lt;!-- Static attribute --&gt;
+class="text-sm"
+
+&lt;!-- Dynamic attribute --&gt;
+class={@dynamic_class}
+
+&lt;!-- Conditional class list --&gt;
+class={[
+  "base-class",
+  @active &amp;&amp; "text-bold",
+  if(@selected, do: "bg-blue", else: "bg-gray")
+]}
+
+&lt;!-- Dynamic ID --&gt;
+id={"item-#{@item.id}"}</code></pre>
+
+<h2>The <code>~p</code> sigil</h2>
+
+<pre><code>~p"/dashboard"                    # verified route (compile-time checked)
+~p"/sessions/#{session.id}"       # with interpolation
+~p"/t/#{@talk.slug}"              # using assigns</code></pre>
+
+<p class="note"><code>~p</code> routes are checked at compile time. If the route doesn't exist in <code>router.ex</code>, you get a warning.</p>
+
+</body>
+</html>

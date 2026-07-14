@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Debugging cheatsheet | Speechwave Docs</title>
+<style>
+  @media print { body { font-size: 10pt; } }
+  body {
+    font-family: 'Palatino Linotype', Palatino, 'Book Antiqua', Georgia, serif;
+    max-width: 42em; margin: 2em auto; padding: 0 1.5em;
+    line-height: 1.5; color: #222;
+  }
+  h1 { font-size: 1.6em; border-bottom: 2px solid #333; padding-bottom: 0.3em; margin-bottom: 1.2em; }
+  h2 { font-size: 1.1em; margin-top: 1.8em; color: #555; text-transform: uppercase; letter-spacing: 0.05em; }
+  code { font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace; font-size: 0.88em; background: #f4f4f4; padding: 0.1em 0.3em; border-radius: 3px; }
+  pre { background: #f8f8f8; border-left: 3px solid #4a5568; padding: 0.8em 1em; overflow-x: auto; font-size: 0.85em; font-family: 'SF Mono', 'Fira Code', monospace; line-height: 1.4; }
+  pre code { background: none; padding: 0; }
+  table { border-collapse: collapse; width: 100%; margin: 0.8em 0; }
+  th, td { border: 1px solid #e2e8f0; padding: 0.4em 0.7em; text-align: left; font-size: 0.88em; }
+  th { background: #f7fafc; font-weight: bold; }
+  .note { color: #718096; font-size: 0.88em; margin-top: 0.3em; }
+  .back-nav { display: block; font-size: 0.85em; color: #718096; text-decoration: none; margin-bottom: 1.5em; }
+  .back-nav:hover { color: #4a5568; }
+</style>
+</head>
+<body>
+<a class="back-nav" href="https://docs.speechwave.live/">&larr; docs.speechwave.live</a>
+
+<h1>Debugging cheatsheet</h1>
+
+<h2>IO.inspect: print and pass through</h2>
+
+<pre><code># In a pipe chain (doesn't break the chain)
+data
+|> step_one()
+|> IO.inspect(label: "after step_one")
+|> step_two()
+
+# Inline
+IO.inspect(variable, label: "my var")
+
+# Inspect with options
+IO.inspect(big_struct, label: "struct", limit: :infinity, pretty: true)</code></pre>
+
+<h2>dbg: smart debug print</h2>
+
+<pre><code># At end of pipe: shows every step
+data
+|> step_one()
+|> step_two()
+|> dbg()
+
+# Any expression
+dbg(some_function(x, y))
+dbg(socket.assigns)</code></pre>
+
+<p class="note"><code>dbg</code> shows file:line, the expression text, and the value. The compiler warns about leftover <code>dbg</code> calls.</p>
+
+<h2>IEx.pry: interactive breakpoint</h2>
+
+<pre><code># Add to code (both parts required)
+require IEx; IEx.pry()
+
+# Must start server with IEx:
+iex -S mix phx.server
+
+# In the pry session:
+variable_name       # inspect any local variable
+socket.assigns      # access nested data
+continue            # resume execution
+respawn              # give up and restart the shell</code></pre>
+
+<p class="note">Only works with <code>iex -S mix</code>. Freezes the paused process until you <code>continue</code>.</p>
+
+<h2>IEx console</h2>
+
+<pre><code># Start console with app loaded
+iex -S mix
+
+# Start console with Phoenix server
+iex -S mix phx.server
+
+# Recompile after editing files (no restart needed)
+recompile()</code></pre>
+
+<h2>Runtime inspection</h2>
+
+<pre><code># Database queries
+alias Speechwave.{Repo, Talks}
+import Ecto.Query
+Repo.all(Talks.Talk)
+Repo.get_by(Talks.Talk, slug: "my-talk")
+
+# ETS tables
+:ets.tab2list(:rate_limiter)
+:ets.info(:rate_limiter)
+:ets.lookup(:rate_limiter, "session-id")
+
+# Processes
+Process.registered()                    # all named processes
+Process.whereis(Speechwave.RateLimiter) # find a specific one
+:sys.get_state(Speechwave.RateLimiter)  # GenServer internal state
+
+# Application config
+Application.get_all_env(:speechwave)</code></pre>
+
+<h2>Picking the right tool</h2>
+
+<table>
+<tr><th>Need</th><th>Tool</th></tr>
+<tr><td>Quick value check</td><td><code>IO.inspect(val, label: "x")</code></td></tr>
+<tr><td>Pipe chain debugging</td><td><code>|&gt; dbg()</code></td></tr>
+<tr><td>Explore variables interactively</td><td><code>require IEx; IEx.pry()</code></td></tr>
+<tr><td>DB queries / process inspection</td><td><code>iex -S mix</code></td></tr>
+<tr><td>ETS / GenServer state</td><td><code>:ets.tab2list/1</code> / <code>:sys.get_state/1</code></td></tr>
+</table>
+
+<h2>Cleanup</h2>
+
+<p class="note"><code>dbg</code> triggers a compiler warning, caught by <code>mix precommit</code>. <code>IO.inspect</code> does <strong>not</strong> warn, so remove it manually before committing.</p>
+
+</body>
+</html>

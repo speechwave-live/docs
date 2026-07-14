@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ecto queries cheatsheet | Speechwave Docs</title>
+<style>
+  @media print { body { font-size: 10pt; } }
+  body {
+    font-family: 'Palatino Linotype', Palatino, 'Book Antiqua', Georgia, serif;
+    max-width: 42em; margin: 2em auto; padding: 0 1.5em;
+    line-height: 1.5; color: #222;
+  }
+  h1 { font-size: 1.6em; border-bottom: 2px solid #333; padding-bottom: 0.3em; margin-bottom: 1.2em; }
+  h2 { font-size: 1.1em; margin-top: 1.8em; color: #555; text-transform: uppercase; letter-spacing: 0.05em; }
+  code { font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace; font-size: 0.88em; background: #f4f4f4; padding: 0.1em 0.3em; border-radius: 3px; }
+  pre { background: #f8f8f8; border-left: 3px solid #4a5568; padding: 0.8em 1em; overflow-x: auto; font-size: 0.85em; font-family: 'SF Mono', 'Fira Code', monospace; line-height: 1.4; }
+  pre code { background: none; padding: 0; }
+  table { border-collapse: collapse; width: 100%; margin: 0.8em 0; }
+  th, td { border: 1px solid #e2e8f0; padding: 0.4em 0.7em; text-align: left; font-size: 0.88em; }
+  th { background: #f7fafc; font-weight: bold; }
+  .note { color: #718096; font-size: 0.88em; margin-top: 0.3em; }
+  .back-nav { display: block; font-size: 0.85em; color: #718096; text-decoration: none; margin-bottom: 1.5em; }
+  .back-nav:hover { color: #4a5568; }
+</style>
+</head>
+<body>
+<a class="back-nav" href="https://docs.speechwave.live/">&larr; docs.speechwave.live</a>
+
+<h1>Ecto queries cheatsheet</h1>
+
+<h2>Repo operations</h2>
+
+<table>
+<tr><th>Operation</th><th>Returns on success</th><th>Returns on failure</th></tr>
+<tr><td><code>Repo.get(Schema, id)</code></td><td>struct</td><td><code>nil</code></td></tr>
+<tr><td><code>Repo.get!(Schema, id)</code></td><td>struct</td><td>raises</td></tr>
+<tr><td><code>Repo.get_by(Schema, col: val)</code></td><td>struct</td><td><code>nil</code></td></tr>
+<tr><td><code>Repo.get_by!(Schema, col: val)</code></td><td>struct</td><td>raises</td></tr>
+<tr><td><code>Repo.one(query)</code></td><td>struct</td><td><code>nil</code> (raises if &gt;1)</td></tr>
+<tr><td><code>Repo.all(query)</code></td><td>list</td><td><code>[]</code></td></tr>
+<tr><td><code>Repo.aggregate(query, :count)</code></td><td>integer</td><td>n/a</td></tr>
+<tr><td><code>Repo.insert(changeset)</code></td><td><code>{:ok, struct}</code></td><td><code>{:error, changeset}</code></td></tr>
+<tr><td><code>Repo.update(changeset)</code></td><td><code>{:ok, struct}</code></td><td><code>{:error, changeset}</code></td></tr>
+<tr><td><code>Repo.delete(struct)</code></td><td><code>{:ok, struct}</code></td><td><code>{:error, changeset}</code></td></tr>
+<tr><td><code>Repo.insert!(changeset)</code></td><td>struct</td><td>raises</td></tr>
+<tr><td><code>Repo.delete_all(query)</code></td><td><code>{count, nil}</code></td><td>n/a</td></tr>
+<tr><td><code>Repo.preload(struct, [:assoc])</code></td><td>struct with assoc</td><td>n/a</td></tr>
+<tr><td><code>Repo.transaction(fn)</code></td><td><code>{:ok, result}</code></td><td><code>{:error, reason}</code></td></tr>
+</table>
+
+<h2>Query clauses</h2>
+
+<pre><code>from u in User,
+  where: u.email == ^email,              # filter (^ pins external value)
+  where: not is_nil(u.api_key),          # NULL check
+  where: u.plan in [:pro, :org],         # IN list
+  join: i in assoc(u, :identities),      # inner join via association
+  left_join: t in assoc(u, :talks),      # left join (keeps unmatched)
+  join: t in Talk, on: t.user_id == u.id,# explicit join condition
+  preload: [:identities],               # eager load associations
+  group_by: u.id,                        # group
+  select: %{user: u, count: count(t.id)},# custom return shape
+  select: {u.email, u.plan},             # return tuple
+  order_by: [desc: u.inserted_at],       # sort
+  limit: 10,                             # limit rows
+  offset: 20                             # skip rows</code></pre>
+
+<h2>Changeset pipeline</h2>
+
+<pre><code>%Schema{}                              # start with struct
+|> Schema.changeset(attrs)             # build changeset with validations
+|> Repo.insert()                       # execute
+
+existing_record                        # start with loaded struct
+|> Schema.changeset(new_attrs)         # build changeset
+|> Repo.update()                       # execute</code></pre>
+
+<h2>Common changeset functions</h2>
+
+<p class="note">Available after <code>import Ecto.Changeset</code></p>
+
+<table>
+<tr><th>Function</th><th>Purpose</th></tr>
+<tr><td><code>cast(struct, attrs, fields)</code></td><td>Pick allowed fields from attrs</td></tr>
+<tr><td><code>validate_required(cs, fields)</code></td><td>Must be present</td></tr>
+<tr><td><code>validate_format(cs, field, regex)</code></td><td>Must match pattern</td></tr>
+<tr><td><code>validate_length(cs, field, opts)</code></td><td>String/list length limits</td></tr>
+<tr><td><code>validate_inclusion(cs, field, list)</code></td><td>Must be in list</td></tr>
+<tr><td><code>unique_constraint(cs, field)</code></td><td>DB uniqueness (checked on insert)</td></tr>
+<tr><td><code>put_change(cs, field, value)</code></td><td>Set a field programmatically</td></tr>
+<tr><td><code>get_field(cs, field)</code></td><td>Read current value (changed or original)</td></tr>
+<tr><td><code>get_change(cs, field)</code></td><td>Read changed value only (nil if unchanged)</td></tr>
+<tr><td><code>add_error(cs, field, message)</code></td><td>Add a custom error</td></tr>
+</table>
+
+<h2><code>with</code> for chaining fallible operations</h2>
+
+<pre><code>with {:ok, user} <- find_user(email),
+     {:ok, token} <- generate_token(user) do
+  send_email(user, token)
+else
+  {:error, :not_found} -> handle_missing()
+  {:error, reason} -> handle_error(reason)
+end</code></pre>
+
+<p class="note">Each <code>&lt;-</code> clause must match. First non-match jumps to <code>else</code>. Often used inside <code>Repo.transaction/1</code>.</p>
+
+<h2><code>fragment</code> for raw SQL</h2>
+
+<pre><code>where: fragment("lower(?) = ?", t.email, ^email)
+
+# ? placeholders are filled with Ecto bindings (safe from injection)</code></pre>
+
+</body>
+</html>
