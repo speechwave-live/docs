@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lesson 7: GenServer, stateful processes</title>
+<style>
+  body {
+    font-family: 'Palatino Linotype', Palatino, 'Book Antiqua', Georgia, serif;
+    max-width: 42em; margin: 2em auto; padding: 0 1.5em;
+    line-height: 1.6; color: #222;
+  }
+  h1 { font-size: 1.6em; border-bottom: 2px solid #333; padding-bottom: 0.3em; }
+  h2 { font-size: 1.2em; margin-top: 2em; color: #1a1a2e; }
+  h3 { font-size: 1.05em; margin-top: 1.5em; }
+  pre {
+    background: #f8f8f8; border-left: 3px solid #4a5568;
+    padding: 1em 1.2em; overflow-x: auto; font-size: 0.9em;
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+    line-height: 1.45;
+  }
+  code {
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+    font-size: 0.88em; background: #f4f4f4; padding: 0.1em 0.3em; border-radius: 3px;
+  }
+  pre code { background: none; padding: 0; }
+  .file-ref { color: #718096; font-size: 0.85em; margin-bottom: -0.5em; }
+  .ruby { background: #fff5f5; border-left: 3px solid #c53030; padding: 0.8em 1em; margin: 1em 0; font-size: 0.92em; }
+  .ruby strong { color: #c53030; }
+  .key-insight { background: #f0fff4; border-left: 3px solid #38a169; padding: 0.8em 1em; margin: 1em 0; }
+  .key-insight strong { color: #276749; }
+  .warning { background: #fffaf0; border-left: 3px solid #dd6b20; padding: 0.8em 1em; margin: 1em 0; }
+  .warning strong { color: #c05621; }
+  blockquote { border-left: 3px solid #cbd5e0; padding-left: 1em; color: #4a5568; margin: 1.5em 0; }
+  .nav { font-size: 0.9em; color: #718096; margin-top: 3em; border-top: 1px solid #e2e8f0; padding-top: 1em; }
+  .nav a { color: #4a5568; }
+
+  .quiz { background: #fafafa; border: 1px solid #e2e8f0; border-radius: 6px; padding: 1.2em; margin: 1.5em 0; }
+  .quiz h3 { margin-top: 0; font-size: 1em; }
+  .quiz label { display: block; padding: 0.5em 0.8em; margin: 0.3em 0; border-radius: 4px; cursor: pointer; font-family: 'SF Mono', 'Fira Code', monospace; font-size: 0.9em; }
+  .quiz label:hover { background: #edf2f7; }
+  .quiz input[type="radio"] { margin-right: 0.5em; }
+  .quiz .feedback { display: none; padding: 0.8em; margin-top: 0.8em; border-radius: 4px; font-family: 'Palatino Linotype', Palatino, serif; font-size: 0.95em; }
+  .quiz .feedback.correct { background: #f0fff4; border: 1px solid #c6f6d5; }
+  .quiz .feedback.wrong { background: #fff5f5; border: 1px solid #fed7d7; }
+
+  table { border-collapse: collapse; margin: 1em 0; width: 100%; }
+  th, td { border: 1px solid #e2e8f0; padding: 0.5em 0.8em; text-align: left; font-size: 0.92em; }
+  th { background: #f7fafc; }
+
+  .diagram { background: #f8f8f8; border: 1px solid #e2e8f0; border-radius: 6px; padding: 1.2em; margin: 1.5em 0; font-family: 'SF Mono', 'Fira Code', monospace; font-size: 0.82em; line-height: 1.5; white-space: pre; overflow-x: auto; }
+  .back-nav { display: block; font-size: 0.85em; color: #718096; text-decoration: none; margin-bottom: 1.5em; }
+  .back-nav:hover { color: #4a5568; }
+</style>
+</head>
+<body>
+<a class="back-nav" href="https://docs.speechwave.live/">&larr; docs.speechwave.live</a>
+
+<h1>Lesson 7: GenServer, stateful processes</h1>
+<p><em>How Speechwave holds state without objects</em></p>
+
+<blockquote>
+<strong>Primary source:</strong> <a href="https://hexdocs.pm/elixir/GenServer.html">GenServer docs</a>, which have a thorough walkthrough. For background on processes: <a href="https://elixir-lang.org/getting-started/processes.html">Elixir Getting Started: Processes</a>.
+</blockquote>
+
+<h2>The problem GenServer solves</h2>
+
+<p>Everything in Elixir is immutable. You can't update a variable, can't modify a map in place, can't store something globally. So how does Speechwave's rate limiter remember when each session last reacted?</p>
+
+<p>The answer is <strong>processes</strong>. A GenServer is a long-lived process that holds state in memory. Other processes send it messages, and it responds, updating its internal state as needed. It's Elixir's answer to the problem that objects solve in OOP: encapsulating state with behavior.</p>
+
+<div class="ruby">
+<strong>Ruby parallel:</strong> Imagine a Ruby object that lives in its own thread, has private instance variables, and only communicates via method calls that go through a thread-safe queue. That's roughly what a GenServer is, except the BEAM VM makes this lightweight enough to run thousands of them.
+</div>
+
+<h2>The shape of a GenServer</h2>
+
+<p>Every GenServer has two halves:</p>
+
+<div class="diagram">                GenServer Module
+┌──────────────────────────────────────────┐
+│                                          │
+│  CLIENT API (called by other processes)  │
+│  ────────────────────────────────────    │
+│  start_link/1  : start the process       │
+│  allow?/1      : public interface        │
+│                                          │
+│  SERVER CALLBACKS (run inside process)   │
+│  ────────────────────────────────────    │
+│  init/1         : set up initial state   │
+│  handle_call/3  : sync request/response  │
+│  handle_cast/2  : async fire-and-forget  │
+│  handle_info/2  : raw messages / timers  │
+│                                          │
+└──────────────────────────────────────────┘</code></div>
+
+<p>The client API runs in the <em>caller's</em> process. The callbacks run in the <em>GenServer's</em> process. The GenServer framework handles the message passing between them.</p>
+
+<h2>Speechwave's RateLimiter: the minimal GenServer</h2>
+
+<p>Let's read the simplest GenServer in your codebase line by line:</p>
+
+<p class="file-ref"><a href="https://github.com/speechwave-live/speechwave/blob/main/lib/speechwave/rate_limiter.ex">lib/speechwave/rate_limiter.ex</a></p>
+<pre><code>defmodule Speechwave.RateLimiter do
+  use GenServer
+
+  @cooldown_ms 3_000
+  @table :rate_limiter
+
+  def start_link(_opts), do: GenServer.start_link(__MODULE__, [], name: __MODULE__)
+
+  def init(_) do
+    :ets.new(@table, [:named_table, :public, read_concurrency: true])
+    {:ok, %{}}
+  end
+
+  def allow?(session_id) do
+    now = System.monotonic_time(:millisecond)
+
+    case :ets.lookup(@table, session_id) do
+      [{^session_id, last_at}] when now - last_at < @cooldown_ms ->
+        false
+
+      _ ->
+        :ets.insert(@table, {session_id, now})
+        true
+    end
+  end
+end</code></pre>
+
+<h3>Line by line</h3>
+
+<table>
+<tr><th>Line</th><th>What it does</th></tr>
+<tr><td><code>use GenServer</code></td><td>Injects the GenServer behaviour, providing default implementations of all callbacks</td></tr>
+<tr><td><code>@cooldown_ms 3_000</code></td><td>Module attribute holding the cooldown window, in milliseconds. The underscores are numeric separators (like <code>3_000</code> = <code>3000</code>)</td></tr>
+<tr><td><code>@table :rate_limiter</code></td><td>Name of the ETS table (an atom)</td></tr>
+<tr><td><code>start_link/1</code></td><td><strong>Client API.</strong> Starts the GenServer process, registering it under its module name so you can find it</td></tr>
+<tr><td><code>init/1</code></td><td><strong>Server callback.</strong> Runs once when the process starts. Creates the ETS table and returns the initial state (<code>%{}</code>)</td></tr>
+<tr><td><code>allow?/1</code></td><td><strong>Client API.</strong> Checks the ETS table directly. Doesn't go through the GenServer message queue</td></tr>
+</table>
+
+<div class="key-insight">
+<strong>Key insight:</strong> This GenServer is unusual: it uses ETS (a shared in-memory table) instead of GenServer state. The GenServer only exists to <em>own</em> the ETS table (the table is destroyed when its owning process dies). The <code>allow?/1</code> function reads/writes ETS directly from the caller's process, which is faster than sending a message to the GenServer and waiting for a reply. This is a performance optimization for hot paths like rate limiting.
+</div>
+
+<h2>The three callback types</h2>
+
+<p>The RateLimiter only uses <code>init/1</code>. A full GenServer uses up to three more callbacks. Here's how they map to concepts you already know:</p>
+
+<table>
+<tr><th>Callback</th><th>Triggered by</th><th>Returns</th><th>Like in LiveView</th></tr>
+<tr><td><code>init/1</code></td><td>Process starting</td><td><code>{:ok, state}</code></td><td><code>mount/3</code></td></tr>
+<tr><td><code>handle_call/3</code></td><td><code>GenServer.call</code></td><td><code>{:reply, response, state}</code></td><td>n/a</td></tr>
+<tr><td><code>handle_cast/2</code></td><td><code>GenServer.cast</code></td><td><code>{:noreply, state}</code></td><td>n/a</td></tr>
+<tr><td><code>handle_info/2</code></td><td>Raw messages / timers</td><td><code>{:noreply, state}</code></td><td><code>handle_info/2</code></td></tr>
+</table>
+
+<p>The difference between <code>call</code> and <code>cast</code>:</p>
+<ul>
+  <li><strong><code>call</code></strong>: synchronous. The caller waits for a response. Use when you need an answer back. "Call and wait."</li>
+  <li><strong><code>cast</code></strong>: asynchronous. The caller fires and forgets. Use when you just need to tell the process something. "Cast and continue."</li>
+</ul>
+
+<h2>DbBackup: GenServer with timers</h2>
+
+<p>This GenServer uses <code>handle_info</code> to implement a recurring timer, a common pattern.</p>
+
+<p class="file-ref"><a href="https://github.com/speechwave-live/speechwave/blob/main/lib/speechwave/db_backup.ex">lib/speechwave/db_backup.ex</a></p>
+<pre><code>defmodule Speechwave.DbBackup do
+  use GenServer
+  require Logger
+
+  @initial_delay :timer.minutes(5)
+  @interval :timer.hours(1)
+
+  def start_link(opts) do
+    GenServer.start_link(__MODULE__, opts, name: __MODULE__)
+  end
+
+  @impl true
+  def init(_opts) do
+    Process.send_after(self(), :backup, @initial_delay)
+    {:ok, %{}}
+  end
+
+  @impl true
+  def handle_info(:backup, state) do
+    run_backup()
+    Process.send_after(self(), :backup, @interval)
+    {:noreply, state}
+  end
+
+  def run_now, do: run_backup()
+
+  defp run_backup do
+    # ... VACUUM INTO, upload to S3
+  end
+end</code></pre>
+
+<p>The timer pattern works like this:</p>
+
+<ol>
+  <li><code>init/1</code> schedules a <code>:backup</code> message to be delivered to itself after 5 minutes</li>
+  <li>When the message arrives, <code>handle_info(:backup, state)</code> runs the backup</li>
+  <li>It then schedules the <em>next</em> <code>:backup</code> message in 1 hour</li>
+  <li>This creates an infinite loop: backup → schedule → wait → backup → schedule → ...</li>
+</ol>
+
+<p><code>Process.send_after(self(), message, delay_ms)</code> is how you build timers in Elixir. <code>self()</code> returns the current process's ID. The message arrives like any other message, and <code>handle_info</code> picks it up.</p>
+
+<div class="key-insight">
+<strong>Key insight:</strong> <code>handle_info/2</code> is the same callback that LiveView uses for PubSub messages. In a LiveView, PubSub broadcasts arrive as <code>handle_info</code>. In a GenServer, timer messages and any other raw messages arrive the same way. It's the universal "something sent me a message" handler.
+</div>
+
+<h3><code>@impl true</code></h3>
+
+<p>You'll notice <code>@impl true</code> before the callbacks. This tells the compiler "this function implements a behaviour callback." If you misspell the function name or get the arity wrong, the compiler warns you. It's optional but good practice. It makes it clear which functions are callbacks vs. your own functions.</p>
+
+<h2>How GenServers get started: the supervision tree</h2>
+
+<p>GenServers don't start themselves. They're started by a <strong>supervisor</strong>, a process whose only job is to start children and restart them if they crash.</p>
+
+<p class="file-ref"><a href="https://github.com/speechwave-live/speechwave/blob/main/lib/speechwave/application.ex#L12-L22">lib/speechwave/application.ex:12-22</a></p>
+<pre><code>children =
+  [
+    SpeechwaveWeb.Telemetry,
+    Speechwave.Repo,
+    {DNSCluster, query: Application.get_env(:speechwave, :dns_cluster_query) || :ignore},
+    {Phoenix.PubSub, name: Speechwave.PubSub},
+    Speechwave.RateLimiter,           # ← started here
+    Speechwave.AuthThrottle,          # ← started here
+    SpeechwaveWeb.Endpoint,
+    SpeechwaveWeb.Presence
+  ] ++ backup_children()
+
+opts = [strategy: :one_for_one, name: Speechwave.Supervisor]
+Supervisor.start_link(children, opts)</code></pre>
+
+<p>Each entry in the <code>children</code> list is a process that the supervisor starts in order. When you see a module name like <code>Speechwave.RateLimiter</code>, the supervisor calls <code>RateLimiter.start_link/1</code>, which starts the GenServer.</p>
+
+<p>The <code>:one_for_one</code> strategy means: if one child crashes, restart just that one. If the RateLimiter crashes, it restarts fresh. The ETS table is recreated in <code>init</code>, and rate limiting resumes (all sessions get a fresh start). The rest of the app keeps running.</p>
+
+<div class="ruby">
+<strong>Ruby parallel:</strong> There's no direct equivalent. The closest is a process manager like systemd or foreman restarting a crashed worker. But Elixir supervisors are inside the application, react in milliseconds, and are the standard way to manage any stateful component. "Let it crash and restart clean" is the core philosophy. Instead of defensive error handling everywhere, you let processes fail and rely on supervision to recover.
+</div>
+
+<h2>AuthThrottle: a richer example</h2>
+
+<p>AuthThrottle follows the same ETS-backed pattern as RateLimiter but with more complex logic: escalating cooldowns for IP throttling.</p>
+
+<p class="file-ref"><a href="https://github.com/speechwave-live/speechwave/blob/main/lib/speechwave/auth_throttle.ex#L68-L88">lib/speechwave/auth_throttle.ex:68-88</a></p>
+<pre><code>def allow_ip?(ip) when is_binary(ip) do
+  now = System.monotonic_time(:millisecond)
+
+  case :ets.lookup(@ip_table, ip) do
+    [{^ip, last_at, cooldown_ms, violation_count}] when now - last_at < cooldown_ms ->
+      {new_cooldown_ms, new_violation_count} = bump_cooldown(cooldown_ms, violation_count)
+      :ets.insert(@ip_table, {ip, now, new_cooldown_ms, new_violation_count})
+      false
+
+    _ ->
+      :ets.insert(@ip_table, {ip, now, @ip_base_cooldown_ms, 0})
+      true
+  end
+end</code></pre>
+
+<p>Everything you've learned converges here:</p>
+<ul>
+  <li><strong>Pattern matching</strong>: the <code>case</code> matches ETS tuples with a guard clause on timing</li>
+  <li><strong>Pin operator</strong>: <code>^ip</code> in the ETS lookup result ensures the match is for the right key</li>
+  <li><strong>Multi-element tuples</strong>: <code>{ip, last_at, cooldown_ms, violation_count}</code> stores four values per entry</li>
+  <li><strong>Module attributes</strong>: <code>@ip_base_cooldown_ms</code>, <code>@ip_max_cooldown_ms</code> for configuration</li>
+</ul>
+
+<p>The test file for AuthThrottle (at <code>test/speechwave/auth_throttle_test.exs</code>) is worth reading. It manipulates ETS timestamps directly to simulate time passing, which is a clean testing pattern for time-dependent behavior.</p>
+
+<h2>When to use a GenServer</h2>
+
+<p>Most of the time, you don't need one. GenServers are for:</p>
+
+<ul>
+  <li><strong>In-memory state that must survive across requests</strong>: rate limits, caches, connection pools</li>
+  <li><strong>Recurring work</strong>: scheduled tasks, periodic cleanup (like DbBackup)</li>
+  <li><strong>Serialized access</strong>: when concurrent processes need to coordinate through a single bottleneck</li>
+</ul>
+
+<p>If you just need to transform data or query the database, use plain functions in context modules. GenServers add complexity. Only reach for them when you need persistent in-process state or timed behavior.</p>
+
+<hr>
+
+<h2>Practice</h2>
+
+<div class="quiz" id="q1">
+  <h3>Question 1</h3>
+  <p>Why does <code>RateLimiter</code> use ETS instead of storing state in the GenServer's <code>state</code> argument?</p>
+  <label><input type="radio" name="q1" value="a" onclick="checkAnswer('q1','c')"> GenServer state can only hold strings and integers</label>
+  <label><input type="radio" name="q1" value="b" onclick="checkAnswer('q1','c')"> ETS tables persist to disk, GenServer state doesn't</label>
+  <label><input type="radio" name="q1" value="c" onclick="checkAnswer('q1','c')"> ETS can be read directly from any process without going through the GenServer's message queue, which is faster for a hot path</label>
+  <label><input type="radio" name="q1" value="d" onclick="checkAnswer('q1','c')"> GenServer state is limited to 1MB of data</label>
+  <div class="feedback correct" id="q1-correct">Right. If <code>allow?/1</code> had to send a message to the GenServer and wait for a reply, every emoji tap would queue behind every other tap. With a <code>:public</code> ETS table, each LiveView process reads and writes directly, with no bottleneck. The GenServer only exists to own the table (so it's created on startup and recreated if the process restarts).</div>
+  <div class="feedback wrong" id="q1-wrong">GenServer state can hold any Elixir term and has no size limit. ETS doesn't persist to disk (it's in-memory). The key difference is about <em>how</em> the data is accessed. Think about what happens when many LiveView processes need to check the rate limit simultaneously. Try again.</div>
+</div>
+
+<div class="quiz" id="q2">
+  <h3>Question 2</h3>
+  <p>In <code>DbBackup</code>, what does <code>Process.send_after(self(), :backup, @interval)</code> do?</p>
+  <label><input type="radio" name="q2" value="a" onclick="checkAnswer('q2','b')"> Calls the <code>:backup</code> function after a delay</label>
+  <label><input type="radio" name="q2" value="b" onclick="checkAnswer('q2','b')"> Schedules the atom <code>:backup</code> to be delivered as a message to the current process after <code>@interval</code> milliseconds, triggering <code>handle_info</code></label>
+  <label><input type="radio" name="q2" value="c" onclick="checkAnswer('q2','b')"> Saves the backup to disk after a delay</label>
+  <label><input type="radio" name="q2" value="d" onclick="checkAnswer('q2','b')"> Sends <code>:backup</code> to all other processes after a delay</label>
+  <div class="feedback correct" id="q2-correct">Exactly. <code>self()</code> is the current process (the GenServer). After <code>@interval</code> milliseconds, the <code>:backup</code> atom arrives in the process's mailbox, which triggers <code>handle_info(:backup, state)</code>. That callback runs the backup and schedules the next one, creating the recurring loop.</div>
+  <div class="feedback wrong" id="q2-wrong"><code>Process.send_after</code> sends a <em>message</em> to a <em>process</em>. <code>self()</code> refers to the current process. When the message arrives, which callback handles it? Try again.</div>
+</div>
+
+<div class="quiz" id="q3">
+  <h3>Question 3</h3>
+  <p>What happens if <code>Speechwave.RateLimiter</code> crashes at runtime?</p>
+  <label><input type="radio" name="q3" value="a" onclick="checkAnswer('q3','d')"> The entire Speechwave application shuts down</label>
+  <label><input type="radio" name="q3" value="b" onclick="checkAnswer('q3','d')"> Rate limiting is permanently disabled until manual restart</label>
+  <label><input type="radio" name="q3" value="c" onclick="checkAnswer('q3','d')"> The ETS table persists and rate limiting continues normally</label>
+  <label><input type="radio" name="q3" value="d" onclick="checkAnswer('q3','d')"> The supervisor restarts it automatically. <code>init</code> creates a fresh ETS table and rate limiting resumes (all sessions get a clean slate)</label>
+  <div class="feedback correct" id="q3-correct">Right. The <code>:one_for_one</code> supervisor detects the crash and restarts just the RateLimiter. <code>init/1</code> runs again, creates a new ETS table, and the process is back. The old table is gone (ETS tables are owned by their creating process), so all rate limits reset, which is fine, since a brief reset is better than downtime. This is "let it crash" in action.</div>
+  <div class="feedback wrong" id="q3-wrong">Think about the supervision tree in <code>application.ex</code>. The <code>:one_for_one</code> strategy tells you what happens when a child crashes. And ETS tables are tied to their owning process. Try again.</div>
+</div>
+
+<div class="quiz" id="q4">
+  <h3>Question 4</h3>
+  <p>What is the difference between <code>handle_call</code> and <code>handle_info</code>?</p>
+  <label><input type="radio" name="q4" value="a" onclick="checkAnswer('q4','c')"> <code>handle_call</code> is for public functions; <code>handle_info</code> is for private functions</label>
+  <label><input type="radio" name="q4" value="b" onclick="checkAnswer('q4','c')"> <code>handle_call</code> modifies state; <code>handle_info</code> is read-only</label>
+  <label><input type="radio" name="q4" value="c" onclick="checkAnswer('q4','c')"> <code>handle_call</code> is triggered by <code>GenServer.call</code> and sends a reply to the caller; <code>handle_info</code> handles raw messages (timers, PubSub) with no reply</label>
+  <label><input type="radio" name="q4" value="d" onclick="checkAnswer('q4','c')"> <code>handle_call</code> runs synchronously; <code>handle_info</code> runs in a separate process</label>
+  <div class="feedback correct" id="q4-correct">Correct. <code>handle_call</code> is the request/response callback. The caller blocks until it gets a <code>{:reply, response, state}</code> back. <code>handle_info</code> handles any other message that lands in the process mailbox: timer messages, PubSub broadcasts, or anything sent with plain <code>send/2</code>. Both run inside the GenServer process; the difference is whether a reply is expected.</div>
+  <div class="feedback wrong" id="q4-wrong">Both callbacks run inside the same GenServer process, and both can modify state. The difference is about <em>how the message arrived</em> and <em>whether the sender expects a response</em>. Try again.</div>
+</div>
+
+<hr>
+
+<h2>Your next step</h2>
+
+<p>Read <code>lib/speechwave/auth_throttle.ex</code> from top to bottom. It uses every pattern from this lesson plus concepts from earlier lessons (pattern matching with guards on ETS tuples, module attributes for configuration, multi-clause <code>case</code>). Then look at its test file. It demonstrates a clean technique for testing time-dependent code by backdating ETS entries.</p>
+
+<p>If you want to experiment, try this in IEx:</p>
+
+<pre><code>iex -S mix
+# Check the ETS table directly
+:ets.tab2list(:rate_limiter)
+
+# See what's in the auth throttle tables
+:ets.tab2list(:auth_throttle_email)
+:ets.tab2list(:auth_throttle_ip)</code></pre>
+
+<p>If anything is unclear, ask your teacher. That's what it's here for.</p>
+
+<div class="nav">
+  <strong>Previous:</strong> <a href="0006-testing-with-exunit.html">Testing with ExUnit</a> · <strong>Reference:</strong> <a href="../reference/glossary.html">Glossary</a><br>
+  <strong>Next:</strong> <a href="0008-debugging.html">Debugging with IEx and dbg</a>
+</div>
+
+<script>
+function checkAnswer(qid, correct) {
+  const selected = document.querySelector(`input[name="${qid}"]:checked`).value;
+  const correctEl = document.getElementById(`${qid}-correct`);
+  const wrongEl = document.getElementById(`${qid}-wrong`);
+  if (selected === correct) {
+    correctEl.style.display = 'block';
+    wrongEl.style.display = 'none';
+  } else {
+    wrongEl.style.display = 'block';
+    correctEl.style.display = 'none';
+  }
+}
+</script>
+
+</body>
+</html>

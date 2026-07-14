@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lesson 4: the LiveView lifecycle</title>
+<style>
+  body {
+    font-family: 'Palatino Linotype', Palatino, 'Book Antiqua', Georgia, serif;
+    max-width: 42em; margin: 2em auto; padding: 0 1.5em;
+    line-height: 1.6; color: #222;
+  }
+  h1 { font-size: 1.6em; border-bottom: 2px solid #333; padding-bottom: 0.3em; }
+  h2 { font-size: 1.2em; margin-top: 2em; color: #1a1a2e; }
+  h3 { font-size: 1.05em; margin-top: 1.5em; }
+  pre {
+    background: #f8f8f8; border-left: 3px solid #4a5568;
+    padding: 1em 1.2em; overflow-x: auto; font-size: 0.9em;
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+    line-height: 1.45;
+  }
+  code {
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+    font-size: 0.88em; background: #f4f4f4; padding: 0.1em 0.3em; border-radius: 3px;
+  }
+  pre code { background: none; padding: 0; }
+  .file-ref { color: #718096; font-size: 0.85em; margin-bottom: -0.5em; }
+  .ruby { background: #fff5f5; border-left: 3px solid #c53030; padding: 0.8em 1em; margin: 1em 0; font-size: 0.92em; }
+  .ruby strong { color: #c53030; }
+  .key-insight { background: #f0fff4; border-left: 3px solid #38a169; padding: 0.8em 1em; margin: 1em 0; }
+  .key-insight strong { color: #276749; }
+  .warning { background: #fffaf0; border-left: 3px solid #dd6b20; padding: 0.8em 1em; margin: 1em 0; }
+  .warning strong { color: #c05621; }
+  blockquote { border-left: 3px solid #cbd5e0; padding-left: 1em; color: #4a5568; margin: 1.5em 0; }
+  .nav { font-size: 0.9em; color: #718096; margin-top: 3em; border-top: 1px solid #e2e8f0; padding-top: 1em; }
+  .nav a { color: #4a5568; }
+
+  .quiz { background: #fafafa; border: 1px solid #e2e8f0; border-radius: 6px; padding: 1.2em; margin: 1.5em 0; }
+  .quiz h3 { margin-top: 0; font-size: 1em; }
+  .quiz label { display: block; padding: 0.5em 0.8em; margin: 0.3em 0; border-radius: 4px; cursor: pointer; font-family: 'SF Mono', 'Fira Code', monospace; font-size: 0.9em; }
+  .quiz label:hover { background: #edf2f7; }
+  .quiz input[type="radio"] { margin-right: 0.5em; }
+  .quiz .feedback { display: none; padding: 0.8em; margin-top: 0.8em; border-radius: 4px; font-family: 'Palatino Linotype', Palatino, serif; font-size: 0.95em; }
+  .quiz .feedback.correct { background: #f0fff4; border: 1px solid #c6f6d5; }
+  .quiz .feedback.wrong { background: #fff5f5; border: 1px solid #fed7d7; }
+
+  table { border-collapse: collapse; margin: 1em 0; width: 100%; }
+  th, td { border: 1px solid #e2e8f0; padding: 0.5em 0.8em; text-align: left; font-size: 0.92em; }
+  th { background: #f7fafc; }
+
+  .diagram { background: #f8f8f8; border: 1px solid #e2e8f0; border-radius: 6px; padding: 1.2em; margin: 1.5em 0; font-family: 'SF Mono', 'Fira Code', monospace; font-size: 0.82em; line-height: 1.5; white-space: pre; overflow-x: auto; }
+  .back-nav { display: block; font-size: 0.85em; color: #718096; text-decoration: none; margin-bottom: 1.5em; }
+  .back-nav:hover { color: #4a5568; }
+</style>
+</head>
+<body>
+<a class="back-nav" href="https://docs.speechwave.live/">&larr; docs.speechwave.live</a>
+
+<h1>Lesson 4: the LiveView lifecycle</h1>
+<p><em>How Speechwave's pages come alive</em></p>
+
+<blockquote>
+<strong>Primary source:</strong> <a href="https://hexdocs.pm/phoenix_live_view/Phoenix.LiveView.html">Phoenix.LiveView docs</a>, which have a complete lifecycle description. Read the "Life-cycle" section after this lesson.
+</blockquote>
+
+<h2>The big picture</h2>
+
+<p>A LiveView is a <strong>long-lived server process</strong> that holds state and pushes HTML updates to the browser over a WebSocket. There's no REST request/response cycle. The process stays alive as long as the user is on the page.</p>
+
+<p>Every LiveView has the same shape:</p>
+
+<div class="diagram">  Browser                         Server (LiveView process)
+  ───────                         ──────────────────────────
+
+  GET /dashboard        ───→      mount/3  (static HTML render)
+                                     │
+  WebSocket connects    ───→      mount/3  (called again, now "connected")
+                                     │
+                                     ▼
+                              Template renders using @assigns
+                                     │
+  User clicks button    ───→      handle_event/3
+                                     │ updates assigns
+                                     ▼
+                              Template re-renders (only the diff)
+                                     │
+  PubSub message arrives  →      handle_info/2
+                                     │ updates assigns
+                                     ▼
+                              Template re-renders (only the diff)</div>
+
+<p>Three callbacks drive everything:</p>
+
+<table>
+<tr><th>Callback</th><th>When it fires</th><th>What it receives</th></tr>
+<tr><td><code>mount/3</code></td><td>Page load (twice, see below)</td><td>URL params, session, socket</td></tr>
+<tr><td><code>handle_event/3</code></td><td>User action (click, form submit, keypress)</td><td>Event name, payload, socket</td></tr>
+<tr><td><code>handle_info/2</code></td><td>Message from another process</td><td>Message, socket</td></tr>
+</table>
+
+<p>All three return the socket (with updated assigns), and Phoenix automatically re-renders only the parts of the template that changed.</p>
+
+<div class="ruby">
+<strong>Rails comparison:</strong> Imagine a Rails controller action that never returns. Instead of rendering once and dying, it stays alive, listening for user actions and pushing HTML fragments back. No page reloads, no JavaScript framework needed. That's LiveView.
+</div>
+
+<h2>mount/3: setting up initial state</h2>
+
+<p>Let's look at both of Speechwave's main LiveViews.</p>
+
+<p class="file-ref"><a href="https://github.com/speechwave-live/speechwave/blob/main/lib/speechwave_web/live/dashboard_live.ex#L8-L28">lib/speechwave_web/live/dashboard_live.ex:8-28</a></p>
+<pre><code>def mount(_params, _session, socket) do
+  scope = socket.assigns.current_scope
+  user = scope.user
+
+  {:ok,
+   assign(socket,
+     talks: Talks.list_talks(scope),
+     form: to_form(Talk.changeset(%Talk{}, %{})),
+     created_talk: nil,
+     selected_talk: nil,
+     selected_talk_url: nil,
+     selected_qr_data_uri: nil,
+     sessions: [],
+     renaming_session_id: nil,
+     rename_form: nil,
+     full_session_count: Talks.count_full_sessions_this_month(scope),
+     session_limit: Plans.limit(:full_sessions_per_month, user.plan),
+     participant_limit: Plans.limit(:max_participants, user.plan),
+     qr_cache: %{}
+   )}
+end</code></pre>
+
+<p>Every key in that <code>assign</code> call becomes an <code>@variable</code> in the template. When you see <code>{@talks}</code> in the HEEx template, it's reading the <code>:talks</code> assign set here.</p>
+
+<p>Now look at TalkLive, the audience-facing page:</p>
+
+<p class="file-ref"><a href="https://github.com/speechwave-live/speechwave/blob/main/lib/speechwave_web/live/talk_live.ex#L8-L22">lib/speechwave_web/live/talk_live.ex:8-22</a></p>
+<pre><code>def mount(%{"slug" => slug}, _session, socket) do
+  case Talks.get_talk_by_slug(slug) do
+    nil ->
+      {:ok, redirect(socket, to: "/")}
+
+    talk ->
+      if connected?(socket) do
+        Phoenix.PubSub.subscribe(Speechwave.PubSub, "reactions:#{slug}")
+        Phoenix.PubSub.subscribe(Speechwave.PubSub, "slides:#{slug}")
+      end
+
+      {:ok,
+       assign(socket, talk: talk, emojis: @emojis, session_id: socket.id, current_slide: 0)}
+  end
+end</code></pre>
+
+<p>Two important things here:</p>
+
+<h3>1. Mount is called twice</h3>
+
+<p>On the first call, the page is being rendered as static HTML (for fast initial load and SEO). On the second call, the WebSocket has connected and the LiveView is "live." The <code>connected?(socket)</code> check distinguishes the two. You only subscribe to PubSub on the second mount, because PubSub needs a live connection.</p>
+
+<div class="key-insight">
+<strong>Key insight:</strong> <code>connected?(socket)</code> is the standard way to defer work that only makes sense when the WebSocket is alive: subscriptions, timers, expensive API calls. If you see it in a <code>mount</code>, it's guarding against running that code during the static HTML render.
+</div>
+
+<h3>2. Pattern matching the params</h3>
+
+<p>DashboardLive uses <code>_params</code> because it doesn't need URL params. TalkLive pattern matches <code>%{"slug" => slug}</code> to extract the slug from <code>/t/:slug</code>. This is the same map destructuring from <a href="0001-pattern-matching.html">Lesson 1</a>, now applied to URL parameters defined in the router.</p>
+
+<h2>handle_event/3: responding to user actions</h2>
+
+<p>When the user clicks a button or submits a form in the browser, the event arrives at <code>handle_event/3</code>. The template wires events using <code>phx-</code> attributes.</p>
+
+<h3>How the template triggers events</h3>
+
+<p class="file-ref"><a href="https://github.com/speechwave-live/speechwave/blob/main/lib/speechwave_web/live/talk_live.html.heex#L18-L20">lib/speechwave_web/live/talk_live.html.heex:18-20</a></p>
+<pre><code>&lt;button
+  phx-click="react"
+  phx-value-emoji={emoji}
+&gt;</code></pre>
+
+<p>When clicked, this sends an event with:</p>
+<ul>
+  <li>Event name: <code>"react"</code> (from <code>phx-click</code>)</li>
+  <li>Payload: <code>%{"emoji" => "👏"}</code> (from <code>phx-value-emoji</code>)</li>
+</ul>
+
+<h3>How the server handles it</h3>
+
+<p class="file-ref"><a href="https://github.com/speechwave-live/speechwave/blob/main/lib/speechwave_web/live/talk_live.ex#L24-L39">lib/speechwave_web/live/talk_live.ex:24-39</a></p>
+<pre><code>def handle_event("react", %{"emoji" => emoji}, socket) do
+  if RateLimiter.allow?(socket.assigns.session_id) do
+    case Talks.get_active_session(socket.assigns.talk.id) do
+      nil -> :ok
+      session -> Reactions.create_reaction(session, emoji, socket.assigns.current_slide)
+    end
+
+    SpeechwaveWeb.Endpoint.broadcast!(
+      "reactions:#{socket.assigns.talk.slug}",
+      "new_reaction",
+      %{emoji: emoji}
+    )
+  end
+
+  {:noreply, socket}
+end</code></pre>
+
+<p>Read this step by step:</p>
+<ol>
+  <li>Pattern match: only fires for <code>"react"</code> events, extracts the emoji</li>
+  <li>Rate-limit check using the socket's session ID</li>
+  <li>If there's an active talk session, save the reaction to the database</li>
+  <li>Broadcast the reaction to all subscribed clients via PubSub</li>
+  <li>Return <code>{:noreply, socket}</code>: no assigns changed on <em>this</em> client's socket</li>
+</ol>
+
+<div class="key-insight">
+<strong>Key insight:</strong> <code>{:noreply, socket}</code> means "I'm done, here's the (possibly updated) socket." If you changed assigns, the template automatically re-renders the affected parts. If you didn't change assigns (as above), nothing re-renders. There is no <code>:reply</code> variant in LiveView events. The "reply" is the re-rendered HTML.
+</div>
+
+<h3>Form events</h3>
+
+<p>Forms use two events: <code>phx-change</code> (fires on every keystroke) and <code>phx-submit</code> (fires on submit).</p>
+
+<p class="file-ref"><a href="https://github.com/speechwave-live/speechwave/blob/main/lib/speechwave_web/live/dashboard_live.html.heex#L108">lib/speechwave_web/live/dashboard_live.html.heex:108</a></p>
+<pre><code>&lt;.form for={@form} id="talk-form" phx-change="validate" phx-submit="save"&gt;</code></pre>
+
+<p>The corresponding handlers:</p>
+
+<p class="file-ref"><a href="https://github.com/speechwave-live/speechwave/blob/main/lib/speechwave_web/live/dashboard_live.ex#L32-L42">lib/speechwave_web/live/dashboard_live.ex:32-42 (validate)</a></p>
+<pre><code>def handle_event("validate", %{"talk" => attrs}, socket) do
+  slug =
+    if attrs["title"] != "" and attrs["slug"] == "" do
+      Talks.generate_slug(attrs["title"])
+    end
+
+  changeset = Talk.changeset(%Talk{}, Map.put(attrs, "slug", slug))
+  {:noreply, assign(socket, form: to_form(changeset, action: :validate))}
+end</code></pre>
+
+<p>On every keystroke, the form params arrive, a changeset is built (which runs validations), and the form assign is updated. The template re-renders, showing validation errors in real time, with no JavaScript validation code needed.</p>
+
+<p class="file-ref"><a href="https://github.com/speechwave-live/speechwave/blob/main/lib/speechwave_web/live/dashboard_live.ex#L44-L67">lib/speechwave_web/live/dashboard_live.ex:44-67 (save)</a></p>
+<pre><code>def handle_event("save", %{"talk" => attrs}, socket) do
+  scope = socket.assigns.current_scope
+
+  case Talks.create_talk(scope, attrs) do
+    {:ok, talk} ->
+      # ... update many assigns on success
+      {:noreply, assign(socket, ...)}
+
+    {:error, changeset} ->
+      {:noreply, assign(socket, form: to_form(changeset))}
+  end
+end</code></pre>
+
+<p>On submit: try to create the talk. On success, update the assigns to show the new talk. On failure, put the error changeset back into the form so validation messages appear. This is the pattern match + pipe + assign pattern from the previous three lessons all working together.</p>
+
+<h2>handle_info/2: messages from other processes</h2>
+
+<p>This is what makes LiveView <em>live</em>. Other processes can send messages to a LiveView, and it can update the page in response. This is how Speechwave shows emoji reactions in real time.</p>
+
+<p class="file-ref"><a href="https://github.com/speechwave-live/speechwave/blob/main/lib/speechwave_web/live/talk_live.ex#L41-L53">lib/speechwave_web/live/talk_live.ex:41-53</a></p>
+<pre><code>def handle_info(
+      %Phoenix.Socket.Broadcast{event: "new_reaction", payload: %{emoji: emoji}},
+      socket
+    ) do
+  {:noreply, push_event(socket, "new_reaction", %{emoji: emoji})}
+end
+
+def handle_info(
+      %Phoenix.Socket.Broadcast{event: "slide_changed", payload: %{slide: slide}},
+      socket
+    ) do
+  {:noreply, assign(socket, :current_slide, slide)}
+end</code></pre>
+
+<p>When someone taps an emoji on their phone, the <code>handle_event("react", ...)</code> broadcasts to PubSub. Every other TalkLive process subscribed to that topic receives the broadcast as a <code>handle_info</code> message. The pattern match on the struct extracts the event type and payload.</p>
+
+<p>Two different responses:</p>
+<ul>
+  <li><code>push_event</code>: sends a message to a JavaScript hook on the client (the emoji animation)</li>
+  <li><code>assign</code>: updates server-side state, which re-renders the template</li>
+</ul>
+
+<div class="ruby">
+<strong>Rails equivalent:</strong> This is like ActionCable, but instead of writing separate JavaScript to handle the WebSocket messages and update the DOM, the server handles everything and pushes the HTML diff. The only JavaScript needed is for things that <em>must</em> run client-side (like the emoji animation via <code>push_event</code> + hooks).
+</div>
+
+<h2>The assigns → template connection</h2>
+
+<p>Every assign set in the LiveView is available in the template as <code>@name</code>:</p>
+
+<table>
+<tr><th>In the LiveView (.ex)</th><th>In the template (.heex)</th></tr>
+<tr><td><code>assign(socket, talks: [...])</code></td><td><code>{@talks}</code></td></tr>
+<tr><td><code>assign(socket, selected_talk: talk)</code></td><td><code>{@selected_talk.title}</code></td></tr>
+<tr><td><code>assign(socket, form: to_form(changeset))</code></td><td><code>&lt;.form for={@form}&gt;</code></td></tr>
+</table>
+
+<p>When you change an assign in a callback, Phoenix diffs the template and sends <em>only the changed HTML</em> to the browser. This is why every callback returns the socket. Phoenix needs it to compute the diff.</p>
+
+<h3>Template syntax quick reference</h3>
+
+<table>
+<tr><th>Syntax</th><th>Meaning</th></tr>
+<tr><td><code>{@variable}</code></td><td>Output an assign value (escaped)</td></tr>
+<tr><td><code>&lt;%= if ... do %&gt;</code></td><td>Conditional rendering</td></tr>
+<tr><td><code>&lt;%= for item &lt;- @list do %&gt;</code></td><td>Loop (like <code>.each</code>)</td></tr>
+<tr><td><code>&lt;.form&gt;</code>, <code>&lt;.input&gt;</code>, <code>&lt;.link&gt;</code></td><td>Function components (defined in CoreComponents)</td></tr>
+<tr><td><code>&lt;Layouts.app&gt;</code></td><td>A component from the <code>Layouts</code> module</td></tr>
+<tr><td><code>phx-click="name"</code></td><td>Send click event to <code>handle_event</code></td></tr>
+<tr><td><code>phx-value-key={value}</code></td><td>Attach data to the event payload</td></tr>
+<tr><td><code>phx-change="name"</code></td><td>Send form change event on each keystroke</td></tr>
+<tr><td><code>phx-submit="name"</code></td><td>Send form submit event</td></tr>
+<tr><td><code>phx-hook="Name"</code></td><td>Attach a JavaScript hook to this element</td></tr>
+</table>
+
+<h2>Putting it all together: the react flow</h2>
+
+<p>Trace the full path of a single emoji tap in Speechwave:</p>
+
+<ol>
+  <li><strong>User loads <code>/t/my-talk</code></strong> → Router maps to <code>TalkLive</code> → <code>mount/3</code> loads the talk, subscribes to PubSub</li>
+  <li><strong>User taps the 👏 button</strong> → <code>phx-click="react"</code> sends event → <code>handle_event("react", ...)</code> saves reaction, broadcasts via PubSub</li>
+  <li><strong>Every other TalkLive process</strong> receives the PubSub broadcast → <code>handle_info(%Broadcast{event: "new_reaction"}, ...)</code> → <code>push_event</code> triggers the JavaScript animation</li>
+</ol>
+
+<p>Pattern matching selects <em>which</em> callback clause runs. Pipes transform data inside the clause. Assigns connect the LiveView state to the template. Context modules handle the database work. Everything from Lessons 1-3 converges here.</p>
+
+<hr>
+
+<h2>Practice</h2>
+
+<div class="quiz" id="q1">
+  <h3>Question 1</h3>
+  <p>Why does TalkLive wrap its PubSub subscriptions in <code>if connected?(socket)</code>?</p>
+  <label><input type="radio" name="q1" value="a" onclick="checkAnswer('q1','b')"> PubSub doesn't work without an internet connection</label>
+  <label><input type="radio" name="q1" value="b" onclick="checkAnswer('q1','b')"> Mount runs twice, first for static HTML, then for the live WebSocket, and subscriptions only make sense on the live connection</label>
+  <label><input type="radio" name="q1" value="c" onclick="checkAnswer('q1','b')"> It checks if the database connection is available</label>
+  <label><input type="radio" name="q1" value="d" onclick="checkAnswer('q1','b')"> It prevents subscribing more than once to the same topic</label>
+  <div class="feedback correct" id="q1-correct">Right. The first mount renders static HTML for the initial page load. There's no WebSocket yet, so subscribing to PubSub would be pointless (and the subscription would be lost when the static render process ends). The second mount has a live WebSocket connection, so subscriptions will actually receive messages.</div>
+  <div class="feedback wrong" id="q1-wrong"><code>connected?(socket)</code> checks whether the LiveView has a live WebSocket connection to the browser. Think about when mount runs, and how many times. Try again.</div>
+</div>
+
+<div class="quiz" id="q2">
+  <h3>Question 2</h3>
+  <p>In DashboardLive, the <code>"validate"</code> handler returns:</p>
+  <pre><code>{:noreply, assign(socket, form: to_form(changeset, action: :validate))}</code></pre>
+  <p>What effect does this have?</p>
+  <label><input type="radio" name="q2" value="a" onclick="checkAnswer('q2','c')"> It sends the form data to the database for validation</label>
+  <label><input type="radio" name="q2" value="b" onclick="checkAnswer('q2','c')"> It sends a reply message back to the browser event handler</label>
+  <label><input type="radio" name="q2" value="c" onclick="checkAnswer('q2','c')"> It updates the form assign, causing the template to re-render and show any validation errors inline</label>
+  <label><input type="radio" name="q2" value="d" onclick="checkAnswer('q2','c')"> It prevents the form from being submitted until all errors are fixed</label>
+  <div class="feedback correct" id="q2-correct">Exactly. Updating the <code>:form</code> assign triggers a re-render of the template. Because the changeset carries validation errors and the <code>action: :validate</code> flag tells the form components to show them, the user sees error messages appear in real time as they type. No JavaScript validation code, no separate API call.</div>
+  <div class="feedback wrong" id="q2-wrong">Think about the assigns → template connection. When you update an assign in a callback, what happens to the template? And a changeset includes validation results without going to the database. Try again.</div>
+</div>
+
+<div class="quiz" id="q3">
+  <h3>Question 3</h3>
+  <p>What is the difference between <code>handle_event</code> and <code>handle_info</code>?</p>
+  <label><input type="radio" name="q3" value="a" onclick="checkAnswer('q3','d')"> <code>handle_event</code> handles GET requests; <code>handle_info</code> handles POST requests</label>
+  <label><input type="radio" name="q3" value="b" onclick="checkAnswer('q3','d')"> <code>handle_event</code> runs on the client; <code>handle_info</code> runs on the server</label>
+  <label><input type="radio" name="q3" value="c" onclick="checkAnswer('q3','d')"> <code>handle_event</code> handles errors; <code>handle_info</code> handles successes</label>
+  <label><input type="radio" name="q3" value="d" onclick="checkAnswer('q3','d')"> <code>handle_event</code> handles actions from the browser (user clicks/submits); <code>handle_info</code> handles messages from other server processes (PubSub, timers)</label>
+  <div class="feedback correct" id="q3-correct">Right. <code>handle_event</code> is for user-initiated actions arriving from the browser via the WebSocket. <code>handle_info</code> is for server-side messages from other Elixir processes: PubSub broadcasts, timer ticks, task completions. Both run on the server; the difference is <em>who sent the message</em>.</div>
+  <div class="feedback wrong" id="q3-wrong">Both callbacks run on the server. The difference is the <em>source</em> of the message. One comes from the user's browser; the other comes from other server-side processes. Try again.</div>
+</div>
+
+<div class="quiz" id="q4">
+  <h3>Question 4</h3>
+  <p>When you see <code>phx-value-id={talk.id}</code> in the template and <code>%{"id" => id}</code> in the handler, what connects them?</p>
+  <label><input type="radio" name="q4" value="a" onclick="checkAnswer('q4','b')"> A global event bus that maps attribute names to handler parameters</label>
+  <label><input type="radio" name="q4" value="b" onclick="checkAnswer('q4','b')"> The <code>phx-value-*</code> attributes become string keys in the event payload map, and the handler pattern matches them out</label>
+  <label><input type="radio" name="q4" value="c" onclick="checkAnswer('q4','b')"> Phoenix generates JavaScript that serializes the DOM into a struct</label>
+  <label><input type="radio" name="q4" value="d" onclick="checkAnswer('q4','b')"> The handler queries the database for the ID specified in the template</label>
+  <div class="feedback correct" id="q4-correct">Correct. Any <code>phx-value-xyz</code> attribute on the element is sent as <code>%{"xyz" => value}</code> in the event payload. The handler's pattern match on <code>%{"id" => id}</code> extracts it. Note that the value is always a <strong>string</strong>, which is why you see <code>String.to_integer(id)</code> in several handlers.</div>
+  <div class="feedback wrong" id="q4-wrong">Look at the naming: <code>phx-value-<strong>id</strong></code> in the template, <code>%{"<strong>id</strong>" => id}</code> in the handler. The part after <code>phx-value-</code> becomes the key in the payload map. Try again.</div>
+</div>
+
+<hr>
+
+<h2>Your next step</h2>
+
+<p>Open <code>talk_live.ex</code> and <code>talk_live.html.heex</code> side by side. Trace the connection between each <code>phx-</code> attribute in the template and its corresponding callback. Then do the same for <code>dashboard_live.ex</code> and its template. It has more events, so it's a richer exercise.</p>
+
+<p>For each <code>handle_event</code>, ask yourself:</p>
+<ul>
+  <li>What triggered this? (Which template element?)</li>
+  <li>What data arrives in the payload? (Which <code>phx-value-*</code> attributes?)</li>
+  <li>What assigns change? (What will re-render?)</li>
+</ul>
+
+<p>If anything is unclear, ask your teacher. That's what it's here for.</p>
+
+<div class="nav">
+  <strong>Previous:</strong> <a href="0003-modules-and-structs.html">Modules &amp; Structs</a> · <strong>Reference:</strong> <a href="../reference/glossary.html">Glossary</a><br>
+  <strong>Next:</strong> <a href="0005-ecto-queries.html">Ecto Queries</a>
+</div>
+
+<script>
+function checkAnswer(qid, correct) {
+  const selected = document.querySelector(`input[name="${qid}"]:checked`).value;
+  const correctEl = document.getElementById(`${qid}-correct`);
+  const wrongEl = document.getElementById(`${qid}-wrong`);
+  if (selected === correct) {
+    correctEl.style.display = 'block';
+    wrongEl.style.display = 'none';
+  } else {
+    wrongEl.style.display = 'block';
+    correctEl.style.display = 'none';
+  }
+}
+</script>
+
+</body>
+</html>

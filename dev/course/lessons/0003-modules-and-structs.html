@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lesson 3: modules, structs &amp; the shape of an Elixir project</title>
+<style>
+  body {
+    font-family: 'Palatino Linotype', Palatino, 'Book Antiqua', Georgia, serif;
+    max-width: 42em; margin: 2em auto; padding: 0 1.5em;
+    line-height: 1.6; color: #222;
+  }
+  h1 { font-size: 1.6em; border-bottom: 2px solid #333; padding-bottom: 0.3em; }
+  h2 { font-size: 1.2em; margin-top: 2em; color: #1a1a2e; }
+  h3 { font-size: 1.05em; margin-top: 1.5em; }
+  pre {
+    background: #f8f8f8; border-left: 3px solid #4a5568;
+    padding: 1em 1.2em; overflow-x: auto; font-size: 0.9em;
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+    line-height: 1.45;
+  }
+  code {
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+    font-size: 0.88em; background: #f4f4f4; padding: 0.1em 0.3em; border-radius: 3px;
+  }
+  pre code { background: none; padding: 0; }
+  .file-ref { color: #718096; font-size: 0.85em; margin-bottom: -0.5em; }
+  .ruby { background: #fff5f5; border-left: 3px solid #c53030; padding: 0.8em 1em; margin: 1em 0; font-size: 0.92em; }
+  .ruby strong { color: #c53030; }
+  .key-insight { background: #f0fff4; border-left: 3px solid #38a169; padding: 0.8em 1em; margin: 1em 0; }
+  .key-insight strong { color: #276749; }
+  .warning { background: #fffaf0; border-left: 3px solid #dd6b20; padding: 0.8em 1em; margin: 1em 0; }
+  .warning strong { color: #c05621; }
+  blockquote { border-left: 3px solid #cbd5e0; padding-left: 1em; color: #4a5568; margin: 1.5em 0; }
+  .nav { font-size: 0.9em; color: #718096; margin-top: 3em; border-top: 1px solid #e2e8f0; padding-top: 1em; }
+  .nav a { color: #4a5568; }
+
+  .quiz { background: #fafafa; border: 1px solid #e2e8f0; border-radius: 6px; padding: 1.2em; margin: 1.5em 0; }
+  .quiz h3 { margin-top: 0; font-size: 1em; }
+  .quiz label { display: block; padding: 0.5em 0.8em; margin: 0.3em 0; border-radius: 4px; cursor: pointer; font-family: 'SF Mono', 'Fira Code', monospace; font-size: 0.9em; }
+  .quiz label:hover { background: #edf2f7; }
+  .quiz input[type="radio"] { margin-right: 0.5em; }
+  .quiz .feedback { display: none; padding: 0.8em; margin-top: 0.8em; border-radius: 4px; font-family: 'Palatino Linotype', Palatino, serif; font-size: 0.95em; }
+  .quiz .feedback.correct { background: #f0fff4; border: 1px solid #c6f6d5; }
+  .quiz .feedback.wrong { background: #fff5f5; border: 1px solid #fed7d7; }
+
+  table { border-collapse: collapse; margin: 1em 0; width: 100%; }
+  th, td { border: 1px solid #e2e8f0; padding: 0.5em 0.8em; text-align: left; font-size: 0.92em; }
+  th { background: #f7fafc; }
+
+  .diagram { background: #f8f8f8; border: 1px solid #e2e8f0; border-radius: 6px; padding: 1.2em; margin: 1.5em 0; font-family: 'SF Mono', 'Fira Code', monospace; font-size: 0.82em; line-height: 1.3; white-space: pre; overflow-x: auto; }
+  .back-nav { display: block; font-size: 0.85em; color: #718096; text-decoration: none; margin-bottom: 1.5em; }
+  .back-nav:hover { color: #4a5568; }
+</style>
+</head>
+<body>
+<a class="back-nav" href="https://docs.speechwave.live/">&larr; docs.speechwave.live</a>
+
+<h1>Lesson 3: modules, structs &amp; the shape of an Elixir project</h1>
+<p><em>How Elixir organizes code without classes</em></p>
+
+<blockquote>
+<strong>Primary source:</strong> <a href="https://hexdocs.pm/phoenix/contexts.html">Phoenix Contexts guide</a>, which explains the architectural pattern behind how Speechwave is organized.
+</blockquote>
+
+<h2>The mental model shift</h2>
+
+<p>In Ruby, organization revolves around <strong>classes</strong>. A <code>Talk</code> class holds both data (attributes) and behavior (methods). You call <code>talk.save!</code> and the object knows how to persist itself.</p>
+
+<p>In Elixir, data and behavior are <strong>separated</strong>:</p>
+
+<ul>
+  <li><strong>Structs</strong> hold data (like a Ruby <code>Struct</code>: just fields, no methods)</li>
+  <li><strong>Modules</strong> hold functions that <em>operate on</em> that data</li>
+</ul>
+
+<p>A <code>%Talk{}</code> struct doesn't know how to save itself. You pass it to <code>Repo.insert/1</code>, a function in a completely different module. Data flows through functions; it never "does" anything on its own.</p>
+
+<h2>Speechwave's architecture</h2>
+
+<p>Here's how your project maps this principle:</p>
+
+<div class="diagram">lib/
+├── speechwave.ex                  ← Root module (empty namespace)
+├── speechwave/
+│   ├── application.ex             ← Supervision tree (boots the app)
+│   ├── repo.ex                    ← Database connection
+│   │
+│   ├── accounts.ex                ← Context: functions for user operations
+│   ├── accounts/
+│   │   ├── user.ex                ← Schema + struct: data shape for users
+│   │   ├── scope.ex               ← Plain struct: wraps current user
+│   │   ├── user_token.ex          ← Schema: auth tokens
+│   │   ├── user_identity.ex       ← Schema: OAuth identities
+│   │   └── user_consent.ex        ← Schema: GDPR consent records
+│   │
+│   ├── talks.ex                   ← Context: functions for talk operations
+│   ├── talks/
+│   │   ├── talk.ex                ← Schema + struct: data shape for talks
+│   │   └── talk_session.ex        ← Schema + struct: live sessions
+│   │
+│   ├── reactions.ex               ← Context: functions for reactions
+│   └── reactions/
+│       └── reaction.ex            ← Schema + struct: emoji reactions
+│
+├── speechwave_web.ex              ← Web module setup (use/import injector)
+└── speechwave_web/
+    ├── router.ex                  ← URL → controller/LiveView mapping
+    ├── endpoint.ex                ← HTTP entry point
+    ├── user_auth.ex               ← Auth plugs
+    ├── live/
+    │   ├── dashboard_live.ex      ← LiveView: speaker dashboard
+    │   ├── talk_live.ex           ← LiveView: audience view
+    │   └── session_analytics_live.ex
+    ├── controllers/               ← Traditional request/response handlers
+    └── components/                ← Reusable UI components</div>
+
+<p>The pattern: <strong>Context modules</strong> (<code>talks.ex</code>, <code>accounts.ex</code>) sit next to <strong>directories of the same name</strong> containing the schemas they operate on. The context is the public API; the schemas are the data definitions.</p>
+
+<div class="ruby">
+<strong>Rails mapping:</strong>
+<table>
+<tr><th>Phoenix / Elixir</th><th>Rails / Ruby</th></tr>
+<tr><td>Schema (<code>talk.ex</code>)</td><td>Model (data shape + validations only)</td></tr>
+<tr><td>Context (<code>talks.ex</code>)</td><td>Model (queries + business logic) or Service Object</td></tr>
+<tr><td>LiveView (<code>dashboard_live.ex</code>)</td><td>Controller + view + JS, combined</td></tr>
+<tr><td>Router (<code>router.ex</code>)</td><td><code>routes.rb</code></td></tr>
+<tr><td><code>speechwave_web.ex</code></td><td><code>ApplicationController</code> (shared setup)</td></tr>
+</table>
+<p>The key difference: Rails combines data + queries + validations + callbacks in the Model. Phoenix splits them: the schema defines shape and validations; the context module provides all query and business logic functions.</p>
+</div>
+
+<h2>Schemas: defining data shape</h2>
+
+<p>A schema maps a database table to an Elixir struct and defines how to validate changes.</p>
+
+<p class="file-ref"><a href="https://github.com/speechwave-live/speechwave/blob/main/lib/speechwave/talks/talk.ex">lib/speechwave/talks/talk.ex</a></p>
+<pre><code>defmodule Speechwave.Talks.Talk do
+  use Ecto.Schema
+  import Ecto.Changeset
+
+  schema "talks" do
+    field :title, :string
+    field :slug, :string
+
+    has_many :talk_sessions, Speechwave.Talks.TalkSession
+    belongs_to :user, Speechwave.Accounts.User
+
+    timestamps(type: :utc_datetime)
+  end
+
+  def changeset(talk, attrs) do
+    talk
+    |> cast(attrs, [:title, :slug])
+    |> validate_required([:title, :slug])
+    |> validate_format(:slug, ~r/^[a-z0-9][a-z0-9-]*$/,
+      message: "only lowercase letters, numbers, and hyphens"
+    )
+    |> validate_length(:slug, max: 100)
+    |> unique_constraint(:slug)
+  end
+end</code></pre>
+
+<p>Let's break this down line by line:</p>
+
+<table>
+<tr><th>Line</th><th>What it does</th></tr>
+<tr><td><code>use Ecto.Schema</code></td><td>Injects the <code>schema</code> macro and struct-building machinery</td></tr>
+<tr><td><code>import Ecto.Changeset</code></td><td>Makes <code>cast</code>, <code>validate_required</code>, etc. available without prefix</td></tr>
+<tr><td><code>schema "talks"</code></td><td>Maps to the <code>talks</code> database table and defines a <code>%Talk{}</code> struct</td></tr>
+<tr><td><code>field :title, :string</code></td><td>Declares a field: the struct will have a <code>.title</code> key</td></tr>
+<tr><td><code>has_many</code> / <code>belongs_to</code></td><td>Declares associations (like ActiveRecord, but loaded explicitly via <code>Repo.preload</code>)</td></tr>
+<tr><td><code>timestamps()</code></td><td>Adds <code>inserted_at</code> and <code>updated_at</code> (note: <code>inserted_at</code>, not <code>created_at</code>)</td></tr>
+</table>
+
+<div class="key-insight">
+<strong>Key insight:</strong> The <code>schema</code> block does two things at once: it defines a database mapping <em>and</em> creates a struct. After this module is compiled, <code>%Talk{}</code> is a valid struct with fields <code>:id</code>, <code>:title</code>, <code>:slug</code>, <code>:user_id</code>, <code>:inserted_at</code>, <code>:updated_at</code>, plus association fields.
+</div>
+
+<h3>The changeset function</h3>
+
+<p>Every schema has a <code>changeset/2</code> function. It's the validation pipeline: it takes an existing struct and a map of new attributes, and returns a changeset describing the proposed changes with any validation errors attached.</p>
+
+<pre><code>def changeset(talk, attrs) do
+  talk
+  |> cast(attrs, [:title, :slug])        # pick allowed fields from attrs
+  |> validate_required([:title, :slug])   # must be present
+  |> validate_format(:slug, ~r/.../)      # must match regex
+  |> validate_length(:slug, max: 100)     # max length
+  |> unique_constraint(:slug)             # DB-level uniqueness
+end</code></pre>
+
+<p>Functions like <code>cast</code>, <code>validate_required</code>, <code>validate_format</code> all come from <code>Ecto.Changeset</code>, available without a prefix because of the <code>import Ecto.Changeset</code> at the top.</p>
+
+<div class="ruby">
+<strong>Ruby equivalent:</strong>
+<pre><code>class Talk < ApplicationRecord
+  validates :title, :slug, presence: true
+  validates :slug, format: { with: /\A[a-z0-9][a-z0-9-]*\z/ },
+                   length: { maximum: 100 },
+                   uniqueness: true
+end</code></pre>
+<p>In Rails, validations are declared on the class and run implicitly on save. In Elixir, you explicitly build a changeset and inspect it. <code>changeset.valid?</code> tells you if it passed, <code>changeset.errors</code> gives you the details, and nothing touches the database until you call <code>Repo.insert</code> or <code>Repo.update</code>.</p>
+</div>
+
+<h2>Plain structs (no database)</h2>
+
+<p>Not every struct maps to a database table. <code>Scope</code> is a plain struct: just <code>defstruct</code>, no <code>schema</code>.</p>
+
+<p class="file-ref"><a href="https://github.com/speechwave-live/speechwave/blob/main/lib/speechwave/accounts/scope.ex">lib/speechwave/accounts/scope.ex</a></p>
+<pre><code>defmodule Speechwave.Accounts.Scope do
+  alias Speechwave.Accounts.User
+
+  defstruct user: nil
+
+  def for_user(%User{} = user) do
+    %__MODULE__{user: user}
+  end
+
+  def for_user(nil), do: nil
+end</code></pre>
+
+<p>Three things to notice:</p>
+
+<ul>
+  <li><code>defstruct user: nil</code>: defines a struct with one field (<code>:user</code>) defaulting to <code>nil</code>. No database table involved.</li>
+  <li><code>%__MODULE__{user: user}</code>: <code>__MODULE__</code> is a compile-time constant that expands to the current module name. This is the same as writing <code>%Speechwave.Accounts.Scope{user: user}</code> but won't break if you rename the module.</li>
+  <li><code>for_user/1</code> has two clauses: one for a real user (pattern matches <code>%User{}</code>), one for <code>nil</code>. This is the multi-clause pattern from <a href="0001-pattern-matching.html">Lesson 1</a>.</li>
+</ul>
+
+<h2>The three import keywords</h2>
+
+<p>These appear at the top of almost every module and control which functions are available. They look similar but do very different things:</p>
+
+<table>
+<tr><th>Keyword</th><th>What it does</th><th>Example from Speechwave</th></tr>
+<tr>
+  <td><code>alias</code></td>
+  <td>Creates a shortcut name for a module. <strong>No new functions</strong>, just less typing.</td>
+  <td><code>alias Speechwave.Talks.Talk</code><br>Now <code>Talk</code> works instead of <code>Speechwave.Talks.Talk</code></td>
+</tr>
+<tr>
+  <td><code>import</code></td>
+  <td>Pulls functions into scope so you can call them <strong>without the module prefix</strong>.</td>
+  <td><code>import Ecto.Changeset</code><br>Now <code>cast(talk, attrs, fields)</code> works instead of <code>Ecto.Changeset.cast(...)</code></td>
+</tr>
+<tr>
+  <td><code>use</code></td>
+  <td>Runs a macro that can inject code, imports, aliases, <strong>anything</strong>. The nuclear option.</td>
+  <td><code>use Ecto.Schema</code><br>Injects the <code>schema</code> macro, struct definition, and more</td>
+</tr>
+</table>
+
+<div class="key-insight">
+<strong>Key insight for reading code:</strong> When you see a function you can't find, work backwards through the top of the file:
+<ol>
+  <li>Check <code>import</code> lines: the function is probably in one of those modules</li>
+  <li>Check <code>use</code> lines: the function may have been injected by a macro</li>
+  <li>For LiveViews and controllers, check <code>speechwave_web.ex</code>: it chains additional <code>use</code> and <code>import</code> calls</li>
+</ol>
+</div>
+
+<p>You can also multi-alias with braces:</p>
+
+<p class="file-ref"><a href="https://github.com/speechwave-live/speechwave/blob/main/lib/speechwave/accounts.ex#L9">lib/speechwave/accounts.ex:9</a></p>
+<pre><code>alias Speechwave.Accounts.{User, UserConsent, UserIdentity, UserNotifier, UserToken}</code></pre>
+
+<p>This creates five aliases in one line. Equivalent to writing five separate <code>alias</code> statements.</p>
+
+<h2>Contexts: the public API layer</h2>
+
+<p>Context modules are where behavior lives. They're the boundary between "what the app does" and "how data is shaped."</p>
+
+<p>Compare the schema and context for Talks:</p>
+
+<table>
+<tr><th><code>Speechwave.Talks.Talk</code> (schema)</th><th><code>Speechwave.Talks</code> (context)</th></tr>
+<tr><td>Defines the <code>%Talk{}</code> struct shape</td><td>Provides functions that <em>use</em> <code>%Talk{}</code> structs</td></tr>
+<tr><td>Contains the <code>changeset</code> function (validation rules)</td><td>Contains <code>create_talk</code>, <code>delete_talk</code>, <code>list_talks</code>, etc.</td></tr>
+<tr><td>Knows about fields and associations</td><td>Knows about business rules, queries, scoping</td></tr>
+<tr><td>Never touches the database directly</td><td>Calls <code>Repo.insert</code>, <code>Repo.all</code>, <code>Repo.delete</code></td></tr>
+</table>
+
+<p>The context is what LiveViews and controllers call. They never reach into schemas for queries:</p>
+
+<pre><code># LiveView calls the context
+talks = Talks.list_talks(scope)
+
+# NOT this (don't query from LiveViews):
+talks = Repo.all(from t in Talk, where: ...)</code></pre>
+
+<div class="ruby">
+<strong>Rails parallel:</strong> This is like the difference between calling <code>Talk.where(user: user).order(created_at: :desc)</code> directly in a controller (which Rails allows) versus going through a service object or scope. Phoenix enforces this separation by convention. The context is the <em>only</em> module that touches Repo for its domain.
+</div>
+
+<h2>How naming maps to files</h2>
+
+<p>Elixir has a simple convention: the module name maps to the file path.</p>
+
+<table>
+<tr><th>Module name</th><th>File path</th></tr>
+<tr><td><code>Speechwave.Talks</code></td><td><code>lib/speechwave/talks.ex</code></td></tr>
+<tr><td><code>Speechwave.Talks.Talk</code></td><td><code>lib/speechwave/talks/talk.ex</code></td></tr>
+<tr><td><code>SpeechwaveWeb.DashboardLive</code></td><td><code>lib/speechwave_web/live/dashboard_live.ex</code></td></tr>
+<tr><td><code>Speechwave.Accounts.User</code></td><td><code>lib/speechwave/accounts/user.ex</code></td></tr>
+</table>
+
+<p>Unlike Ruby, this is convention only. The compiler doesn't enforce it. But every Elixir project follows it, and your editor's "go to file" will work predictably.</p>
+
+<div class="warning">
+<strong>Note:</strong> Module nesting in Elixir is purely cosmetic. <code>Speechwave.Talks.Talk</code> is <em>not</em> defined "inside" <code>Speechwave.Talks</code>. The dots are just part of the atom name. There's no implicit relationship. Each module is completely independent. This is different from Ruby, where <code>class Talks::Talk</code> actually nests inside the <code>Talks</code> namespace and can access its constants.
+</div>
+
+<hr>
+
+<h2>Practice</h2>
+
+<div class="quiz" id="q1">
+  <h3>Question 1</h3>
+  <p>You see this at the top of <code>talks.ex</code>:</p>
+  <pre><code>import Ecto.Query
+alias Speechwave.Talks.Talk</code></pre>
+  <p>What does each line let you do?</p>
+  <label><input type="radio" name="q1" value="a" onclick="checkAnswer('q1','c')"> Both let you call Talk functions without a module prefix</label>
+  <label><input type="radio" name="q1" value="b" onclick="checkAnswer('q1','c')"> <code>import</code> creates a shortcut name; <code>alias</code> brings functions into scope</label>
+  <label><input type="radio" name="q1" value="c" onclick="checkAnswer('q1','c')"> <code>import</code> lets you call <code>from</code>/<code>where</code> without <code>Ecto.Query.</code> prefix; <code>alias</code> lets you write <code>Talk</code> instead of <code>Speechwave.Talks.Talk</code></label>
+  <label><input type="radio" name="q1" value="d" onclick="checkAnswer('q1','c')"> <code>import</code> copies the Ecto.Query module code; <code>alias</code> creates a new Talk module</label>
+  <div class="feedback correct" id="q1-correct">Right. <code>import</code> makes another module's functions callable without a prefix, so <code>from(t in Talk, ...)</code> works instead of <code>Ecto.Query.from(...)</code>. <code>alias</code> is just a name shortcut: no new functions, just less typing.</div>
+  <div class="feedback wrong" id="q1-wrong">Remember: <code>import</code> brings <em>functions</em> into scope (you can call them without the module name). <code>alias</code> creates a <em>name shortcut</em> for a module (it doesn't import any functions). Try again.</div>
+</div>
+
+<div class="quiz" id="q2">
+  <h3>Question 2</h3>
+  <p>Looking at <code>Speechwave.Accounts.User</code>, where does the <code>cast</code> function in the changeset pipeline come from?</p>
+  <pre><code>defmodule Speechwave.Accounts.User do
+  use Ecto.Schema
+  import Ecto.Changeset
+
+  # ...
+  def email_changeset(user, attrs, opts \\ []) do
+    user
+    |> cast(attrs, [:email])
+    |> validate_required([:email])
+    # ...
+  end
+end</code></pre>
+  <label><input type="radio" name="q2" value="a" onclick="checkAnswer('q2','b')"> It's built into Elixir, available everywhere</label>
+  <label><input type="radio" name="q2" value="b" onclick="checkAnswer('q2','b')"> <code>Ecto.Changeset</code>, brought in by the <code>import</code> on line 3</label>
+  <label><input type="radio" name="q2" value="c" onclick="checkAnswer('q2','b')"> <code>Ecto.Schema</code>, injected by the <code>use</code> on line 2</label>
+  <label><input type="radio" name="q2" value="d" onclick="checkAnswer('q2','b')"> Defined elsewhere in this same module as a private function</label>
+  <div class="feedback correct" id="q2-correct">Exactly. <code>import Ecto.Changeset</code> makes all changeset functions (<code>cast</code>, <code>validate_required</code>, <code>validate_format</code>, <code>put_change</code>, <code>get_field</code>, etc.) available without the <code>Ecto.Changeset.</code> prefix. You can verify with <code>h Ecto.Changeset.cast</code> in IEx.</div>
+  <div class="feedback wrong" id="q2-wrong">Look at the top of the module. When a function has no module prefix and isn't defined in the current module, check the <code>import</code> lines. One of them brought it into scope. Try again.</div>
+</div>
+
+<div class="quiz" id="q3">
+  <h3>Question 3</h3>
+  <p>What does <code>%__MODULE__{user: user}</code> in <code>Scope</code> expand to?</p>
+  <label><input type="radio" name="q3" value="a" onclick="checkAnswer('q3','d')"> A map with keys <code>:__MODULE__</code> and <code>:user</code></label>
+  <label><input type="radio" name="q3" value="b" onclick="checkAnswer('q3','d')"> A call to the parent module's constructor</label>
+  <label><input type="radio" name="q3" value="c" onclick="checkAnswer('q3','d')"> An anonymous struct with a user field</label>
+  <label><input type="radio" name="q3" value="d" onclick="checkAnswer('q3','d')"> <code>%Speechwave.Accounts.Scope{user: user}</code></label>
+  <div class="feedback correct" id="q3-correct">Right. <code>__MODULE__</code> is a compile-time constant that expands to the current module's name. Inside <code>Speechwave.Accounts.Scope</code>, it becomes <code>Speechwave.Accounts.Scope</code>. This idiom avoids hardcoding the module name, so it survives renames.</div>
+  <div class="feedback wrong" id="q3-wrong"><code>__MODULE__</code> is a special compile-time value that expands to the fully qualified name of the module it appears in. Inside the <code>Scope</code> module, it's <code>Speechwave.Accounts.Scope</code>. Try again.</div>
+</div>
+
+<div class="quiz" id="q4">
+  <h3>Question 4</h3>
+  <p>You want to find where the function <code>validate_format</code> is defined. You see <code>import Ecto.Changeset</code> at the top of the file. What's the fastest way to read its docs?</p>
+  <label><input type="radio" name="q4" value="a" onclick="checkAnswer('q4','c')"> Search the Speechwave codebase for <code>def validate_format</code></label>
+  <label><input type="radio" name="q4" value="b" onclick="checkAnswer('q4','c')"> Run <code>h validate_format</code> in IEx</label>
+  <label><input type="radio" name="q4" value="c" onclick="checkAnswer('q4','c')"> Run <code>h Ecto.Changeset.validate_format</code> in IEx</label>
+  <label><input type="radio" name="q4" value="d" onclick="checkAnswer('q4','c')"> Run <code>mix hex.docs offline ecto_changeset</code></label>
+  <div class="feedback correct" id="q4-correct">Right. The <code>import</code> tells you the module. Use the fully qualified name in IEx. <code>h validate_format</code> alone won't work in a bare IEx session because the function isn't imported there. And the hex package is <code>ecto</code>, not <code>ecto_changeset</code>. <code>Ecto.Changeset</code> is a module inside the <code>ecto</code> package.</div>
+  <div class="feedback wrong" id="q4-wrong">Remember from the <a href="../reference/accessing-docs.html">docs reference</a>: unqualified names like <code>validate_format</code> only work in IEx if they're imported there (which they aren't). You need the full module path. And the function is in the <code>ecto</code> hex package, not a separate <code>ecto_changeset</code> package. Try again.</div>
+</div>
+
+<hr>
+
+<h2>Your next step</h2>
+
+<p>Open two files side by side:</p>
+<ul>
+  <li><code>lib/speechwave/accounts/user.ex</code> (the schema)</li>
+  <li><code>lib/speechwave/accounts.ex</code> (the context)</li>
+</ul>
+
+<p>For each public function in <code>accounts.ex</code>, trace which schema it touches and how. Notice that the context <em>never</em> reaches into another context's schemas. <code>Accounts</code> works with <code>User</code>, <code>UserToken</code>, <code>UserIdentity</code>; <code>Talks</code> works with <code>Talk</code> and <code>TalkSession</code>. Each context owns its domain.</p>
+
+<p>If anything is unclear, ask your teacher. That's what it's here for.</p>
+
+<div class="nav">
+  <strong>Previous:</strong> <a href="0002-pipe-operator.html">The Pipe Operator</a> · <strong>Reference:</strong> <a href="../reference/glossary.html">Glossary</a><br>
+  <strong>Next:</strong> <a href="0004-liveview-lifecycle.html">The LiveView Lifecycle</a>
+</div>
+
+<script>
+function checkAnswer(qid, correct) {
+  const selected = document.querySelector(`input[name="${qid}"]:checked`).value;
+  const correctEl = document.getElementById(`${qid}-correct`);
+  const wrongEl = document.getElementById(`${qid}-wrong`);
+  if (selected === correct) {
+    correctEl.style.display = 'block';
+    wrongEl.style.display = 'none';
+  } else {
+    wrongEl.style.display = 'block';
+    correctEl.style.display = 'none';
+  }
+}
+</script>
+
+</body>
+</html>

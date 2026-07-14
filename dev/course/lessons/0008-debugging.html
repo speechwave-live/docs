@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lesson 8: debugging with IEx and dbg</title>
+<style>
+  body {
+    font-family: 'Palatino Linotype', Palatino, 'Book Antiqua', Georgia, serif;
+    max-width: 42em; margin: 2em auto; padding: 0 1.5em;
+    line-height: 1.6; color: #222;
+  }
+  h1 { font-size: 1.6em; border-bottom: 2px solid #333; padding-bottom: 0.3em; }
+  h2 { font-size: 1.2em; margin-top: 2em; color: #1a1a2e; }
+  h3 { font-size: 1.05em; margin-top: 1.5em; }
+  pre {
+    background: #f8f8f8; border-left: 3px solid #4a5568;
+    padding: 1em 1.2em; overflow-x: auto; font-size: 0.9em;
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+    line-height: 1.45;
+  }
+  code {
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+    font-size: 0.88em; background: #f4f4f4; padding: 0.1em 0.3em; border-radius: 3px;
+  }
+  pre code { background: none; padding: 0; }
+  .file-ref { color: #718096; font-size: 0.85em; margin-bottom: -0.5em; }
+  .ruby { background: #fff5f5; border-left: 3px solid #c53030; padding: 0.8em 1em; margin: 1em 0; font-size: 0.92em; }
+  .ruby strong { color: #c53030; }
+  .key-insight { background: #f0fff4; border-left: 3px solid #38a169; padding: 0.8em 1em; margin: 1em 0; }
+  .key-insight strong { color: #276749; }
+  .warning { background: #fffaf0; border-left: 3px solid #dd6b20; padding: 0.8em 1em; margin: 1em 0; }
+  .warning strong { color: #c05621; }
+  blockquote { border-left: 3px solid #cbd5e0; padding-left: 1em; color: #4a5568; margin: 1.5em 0; }
+  .nav { font-size: 0.9em; color: #718096; margin-top: 3em; border-top: 1px solid #e2e8f0; padding-top: 1em; }
+  .nav a { color: #4a5568; }
+
+  table { border-collapse: collapse; margin: 1em 0; width: 100%; }
+  th, td { border: 1px solid #e2e8f0; padding: 0.5em 0.8em; text-align: left; font-size: 0.92em; }
+  th { background: #f7fafc; }
+  .back-nav { display: block; font-size: 0.85em; color: #718096; text-decoration: none; margin-bottom: 1.5em; }
+  .back-nav:hover { color: #4a5568; }
+</style>
+</head>
+<body>
+<a class="back-nav" href="https://docs.speechwave.live/">&larr; docs.speechwave.live</a>
+
+<h1>Lesson 8: debugging with IEx and dbg</h1>
+<p><em>Your toolkit for understanding what's actually happening</em></p>
+
+<blockquote>
+<strong>Primary source:</strong> <a href="https://hexdocs.pm/elixir/debugging.html">Elixir Debugging guide</a>, which covers all techniques in this lesson and more. Also: <a href="https://hexdocs.pm/iex/IEx.html">IEx docs</a>.
+</blockquote>
+
+<h2>The tools</h2>
+
+<p>Elixir gives you four debugging tools, from lightest to heaviest:</p>
+
+<table>
+<tr><th>Tool</th><th>What it does</th><th>Ruby equivalent</th></tr>
+<tr><td><code>IO.inspect/2</code></td><td>Prints a value and returns it (pipe-friendly)</td><td><code>tap { |x| pp x }</code></td></tr>
+<tr><td><code>dbg/2</code></td><td>Prints the expression, each pipe step, and the result</td><td>n/a</td></tr>
+<tr><td><code>IEx.pry/0</code></td><td>Pauses execution and drops you into an interactive shell at that point</td><td><code>binding.pry</code></td></tr>
+<tr><td>IEx helpers</td><td>Inspect processes, state, and the system at runtime</td><td><code>rails console</code></td></tr>
+</table>
+
+<h2>IO.inspect: the print debugger</h2>
+
+<p>The simplest tool. <code>IO.inspect/2</code> prints a value to the terminal and <em>returns it unchanged</em>. That "returns it" part is crucial. It means you can drop it into the middle of a pipe chain without breaking anything:</p>
+
+<pre><code>def generate_slug(title) do
+  title
+  |> String.downcase()
+  |> IO.inspect(label: "after downcase")       # prints, then passes through
+  |> String.replace(~r/[^a-z0-9\s]/, "")
+  |> IO.inspect(label: "after replace")
+  |> String.trim()
+  |> String.replace(~r/\s+/, "-")
+end</code></pre>
+
+<p>Output in the terminal:</p>
+
+<pre><code>after downcase: "elixir for rubyists!"
+after replace: "elixir for rubyists"</code></pre>
+
+<p>The <code>label:</code> option is important. Without it, you'll see values flying past with no idea which <code>IO.inspect</code> produced them.</p>
+
+<div class="ruby">
+<strong>Ruby:</strong> Like <code>puts x.inspect</code>, but <code>IO.inspect</code> returns the value so it doesn't break chains. In Ruby you'd need <code>.tap { |x| puts x }</code> to achieve the same thing.
+</div>
+
+<h3>Inspecting inside non-pipe expressions</h3>
+
+<p>You can also use it inline for any value:</p>
+
+<pre><code>def handle_event("save", %{"talk" => attrs}, socket) do
+  IO.inspect(attrs, label: "save attrs")
+  scope = socket.assigns.current_scope |> IO.inspect(label: "scope")
+  # ...
+end</code></pre>
+
+<h2>dbg: the smart print debugger</h2>
+
+<p><code>dbg</code> is <code>IO.inspect</code>'s smarter sibling. Instead of printing a single value, it prints the <em>expression itself</em>, and for pipe chains, it shows the result at <em>every step</em>:</p>
+
+<pre><code>def generate_slug(title) do
+  title
+  |> String.downcase()
+  |> String.replace(~r/[^a-z0-9\s]/, "")
+  |> String.trim()
+  |> String.replace(~r/\s+/, "-")
+  |> dbg()
+end</code></pre>
+
+<p>Output:</p>
+
+<pre><code>[lib/speechwave/talks.ex:141]
+title = "Elixir for Rubyists!"
+
+title |> String.downcase() #=> "elixir for rubyists!"
+
+title |> String.downcase() |> String.replace(~r/[^a-z0-9\s]/, "") #=> "elixir for rubyists"
+
+title |> String.downcase() |> String.replace(~r/[^a-z0-9\s]/, "") |> String.trim() #=> "elixir for rubyists"
+
+title |> String.downcase() |> String.replace(~r/[^a-z0-9\s]/, "") |> String.trim()
+|> String.replace(~r/\s+/, "-") #=> "elixir-for-rubyists"</code></pre>
+
+<p>One line of code, and you see the input value, every transformation, and the file/line where it happened. Like <code>IO.inspect</code>, it returns the value so it works inside pipes.</p>
+
+<div class="key-insight">
+<strong>Key insight:</strong> Put <code>dbg()</code> at the <em>end</em> of a pipe chain to see every step. Put it in the <em>middle</em> to see only the steps up to that point. It's a macro, so it can read the source code and print it. That's why you see the actual expressions, not just the values.
+</div>
+
+<h3>dbg outside of pipes</h3>
+
+<p><code>dbg</code> works with any expression, not just pipes:</p>
+
+<pre><code>def handle_event("react", %{"emoji" => emoji}, socket) do
+  dbg(socket.assigns.session_id)
+  dbg(RateLimiter.allow?(socket.assigns.session_id))
+  # ...
+end</code></pre>
+
+<p>Output:</p>
+
+<pre><code>[lib/speechwave_web/live/talk_live.ex:25]
+socket.assigns.session_id #=> "phx-F5k2..."
+
+[lib/speechwave_web/live/talk_live.ex:26]
+RateLimiter.allow?(socket.assigns.session_id) #=> true</code></pre>
+
+<h2>IEx.pry: interactive breakpoints</h2>
+
+<p>When you need to explore, not just print. <code>IEx.pry</code> pauses execution and drops you into a live IEx session where you can inspect any variable in scope.</p>
+
+<h3>Step 1: add the pry</h3>
+
+<pre><code>def handle_event("save", %{"talk" => attrs}, socket) do
+  require IEx; IEx.pry()
+  scope = socket.assigns.current_scope
+  # ...
+end</code></pre>
+
+<p>The <code>require IEx</code> is needed because <code>pry</code> is a macro. You can put both on one line for convenience.</p>
+
+<h3>Step 2: start the server with IEx</h3>
+
+<pre><code>iex -S mix phx.server</code></pre>
+
+<p>This runs the Phoenix server inside an IEx session. When code hits <code>IEx.pry()</code>, execution pauses and your terminal becomes an interactive shell at that point:</p>
+
+<pre><code>Request to pry #PID<0.750.0> at SpeechwaveWeb.DashboardLive.handle_event/3
+  (lib/speechwave_web/live/dashboard_live.ex:44)
+
+    42:   def handle_event("save", %{"talk" => attrs}, socket) do
+    43:     require IEx; IEx.pry()
+    44:     scope = socket.assigns.current_scope
+
+Allow? [Yn]</code></pre>
+
+<p>Type <code>Y</code> (or just Enter), and you can explore:</p>
+
+<pre><code>iex> attrs
+%{"title" => "My New Talk", "slug" => "my-new-talk"}
+iex> socket.assigns.current_scope
+%Speechwave.Accounts.Scope{user: %Speechwave.Accounts.User{...}}
+iex> socket.assigns.talks |> length()
+3</code></pre>
+
+<p>Type <code>continue</code> to resume execution, or <code>respawn</code> to give up and restart the shell.</p>
+
+<div class="ruby">
+<strong>Ruby:</strong> Exactly like <code>binding.pry</code> (Pry) or <code>debugger</code> (Ruby 3.1+). Same workflow: add the line, hit the code path, explore variables.
+</div>
+
+<div class="warning">
+<strong>Important:</strong> <code>IEx.pry</code> only works when the app is started with <code>iex -S mix phx.server</code>, not plain <code>mix phx.server</code>. Without IEx, the pry is silently skipped. Also: a pry in a LiveView callback will freeze that LiveView process while you're exploring. The browser tab will hang until you <code>continue</code>.
+</div>
+
+<h2>IEx as a runtime console</h2>
+
+<p>Even without pry, <code>iex -S mix</code> gives you a live console connected to your application. You can call any function, query the database, and inspect processes.</p>
+
+<h3>Database exploration</h3>
+
+<pre><code>iex -S mix
+
+# Query the database directly
+alias Speechwave.{Repo, Talks, Accounts}
+alias Speechwave.Talks.Talk
+import Ecto.Query
+
+# List all talks
+Repo.all(Talk)
+
+# Find a specific talk
+Repo.get_by(Talk, slug: "my-talk")
+
+# Run a context function
+user = Repo.get_by(Accounts.User, email: "speaker@example.com")
+scope = Accounts.Scope.for_user(user)
+Talks.list_talks(scope)
+
+# Count reactions for a session
+Speechwave.Reactions.count_reactions(1)</code></pre>
+
+<h3>Inspecting processes</h3>
+
+<pre><code># See all running named processes
+Process.registered()
+
+# Check if RateLimiter is running
+Process.whereis(Speechwave.RateLimiter)
+
+# Look at the ETS rate limiter table
+:ets.tab2list(:rate_limiter)
+
+# See the auth throttle state
+:ets.tab2list(:auth_throttle_email)
+:ets.tab2list(:auth_throttle_ip)
+
+# Get the GenServer's internal state
+:sys.get_state(Speechwave.RateLimiter)</code></pre>
+
+<h3>Recompiling without restarting</h3>
+
+<pre><code># After editing a file, recompile it live:
+recompile()
+
+# The running app picks up the changes immediately.
+# No need to restart the server.</code></pre>
+
+<div class="key-insight">
+<strong>Key insight:</strong> <code>recompile()</code> in IEx is incredibly powerful. Edit a function, run <code>recompile()</code>, and the running application uses the new code immediately. No server restart, no lost state. This is one of the BEAM's superpowers: hot code reloading.
+</div>
+
+<h2>Choosing the right tool</h2>
+
+<table>
+<tr><th>Situation</th><th>Tool</th><th>Why</th></tr>
+<tr><td>Quick check: "what value is this?"</td><td><code>IO.inspect(val, label: "x")</code></td><td>Fastest to add and remove</td></tr>
+<tr><td>Pipe chain: "where does it go wrong?"</td><td><code>|&gt; dbg()</code></td><td>Shows every step automatically</td></tr>
+<tr><td>Need to explore: "what's on this socket?"</td><td><code>require IEx; IEx.pry()</code></td><td>Full interactive access to all variables</td></tr>
+<tr><td>General exploration or DB queries</td><td><code>iex -S mix</code></td><td>Live console, no code changes needed</td></tr>
+<tr><td>Check ETS / process state at runtime</td><td><code>:ets.tab2list/1</code>, <code>:sys.get_state/1</code></td><td>Inspect running GenServer state without pry</td></tr>
+</table>
+
+<div class="warning">
+<strong>Remember to clean up!</strong> Remove <code>IO.inspect</code>, <code>dbg</code>, and <code>IEx.pry</code> calls before committing. Speechwave's <code>mix precommit</code> alias runs <code>compile --warnings-as-errors</code>, which will catch leftover <code>dbg</code> calls (the compiler warns about them). But <code>IO.inspect</code> won't trigger a warning, so you need to catch those yourself.
+</div>
+
+<hr>
+
+<h2>Try it</h2>
+
+<p>This lesson is best learned hands-on. Try each of these exercises:</p>
+
+<h3>Exercise 1: dbg a pipe chain</h3>
+
+<p>Add <code>|&gt; dbg()</code> to the end of <code>generate_slug/1</code> in <code>lib/speechwave/talks.ex</code>. Start the server with <code>iex -S mix phx.server</code>, go to the dashboard, and create a talk. Watch the terminal output. Remove the <code>dbg</code> when done.</p>
+
+<h3>Exercise 2: explore with IEx</h3>
+
+<p>Start <code>iex -S mix</code> and run:</p>
+
+<pre><code>alias Speechwave.{Repo, Talks}
+import Ecto.Query
+Repo.all(from t in Talks.Talk, select: {t.title, t.slug})</code></pre>
+
+<p>Then check the rate limiter state:</p>
+
+<pre><code>:ets.tab2list(:rate_limiter)
+:ets.info(:rate_limiter)</code></pre>
+
+<h3>Exercise 3: pry into a LiveView</h3>
+
+<p>Add <code>require IEx; IEx.pry()</code> at the top of the <code>"show_qr"</code> handler in <code>dashboard_live.ex</code>. Start with <code>iex -S mix phx.server</code>, click a talk in the dashboard, and explore the socket assigns from the pry session. Type <code>continue</code> to resume. Remove the pry when done.</p>
+
+<p>If anything is unclear, ask your teacher. That's what it's here for.</p>
+
+<div class="nav">
+  <strong>Previous:</strong> <a href="0007-genserver.html">GenServer</a> · <strong>Reference:</strong> <a href="../reference/glossary.html">Glossary</a>
+</div>
+
+</body>
+</html>

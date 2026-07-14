@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lesson 1: pattern matching, the key to reading Elixir</title>
+<style>
+  body {
+    font-family: 'Palatino Linotype', Palatino, 'Book Antiqua', Georgia, serif;
+    max-width: 42em; margin: 2em auto; padding: 0 1.5em;
+    line-height: 1.6; color: #222;
+  }
+  h1 { font-size: 1.6em; border-bottom: 2px solid #333; padding-bottom: 0.3em; }
+  h2 { font-size: 1.2em; margin-top: 2em; color: #1a1a2e; }
+  h3 { font-size: 1.05em; margin-top: 1.5em; }
+  pre {
+    background: #f8f8f8; border-left: 3px solid #4a5568;
+    padding: 1em 1.2em; overflow-x: auto; font-size: 0.9em;
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+    line-height: 1.45;
+  }
+  code {
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+    font-size: 0.88em; background: #f4f4f4; padding: 0.1em 0.3em; border-radius: 3px;
+  }
+  pre code { background: none; padding: 0; }
+  .file-ref { color: #718096; font-size: 0.85em; margin-bottom: -0.5em; }
+  .ruby { background: #fff5f5; border-left: 3px solid #c53030; padding: 0.8em 1em; margin: 1em 0; font-size: 0.92em; }
+  .ruby strong { color: #c53030; }
+  .key-insight { background: #f0fff4; border-left: 3px solid #38a169; padding: 0.8em 1em; margin: 1em 0; }
+  .key-insight strong { color: #276749; }
+  blockquote { border-left: 3px solid #cbd5e0; padding-left: 1em; color: #4a5568; margin: 1.5em 0; }
+  .nav { font-size: 0.9em; color: #718096; margin-top: 3em; border-top: 1px solid #e2e8f0; padding-top: 1em; }
+  .nav a { color: #4a5568; }
+
+  /* Quiz styles */
+  .quiz { background: #fafafa; border: 1px solid #e2e8f0; border-radius: 6px; padding: 1.2em; margin: 1.5em 0; }
+  .quiz h3 { margin-top: 0; font-size: 1em; }
+  .quiz label { display: block; padding: 0.5em 0.8em; margin: 0.3em 0; border-radius: 4px; cursor: pointer; font-family: 'SF Mono', 'Fira Code', monospace; font-size: 0.9em; }
+  .quiz label:hover { background: #edf2f7; }
+  .quiz input[type="radio"] { margin-right: 0.5em; }
+  .quiz .feedback { display: none; padding: 0.8em; margin-top: 0.8em; border-radius: 4px; font-family: 'Palatino Linotype', Palatino, serif; font-size: 0.95em; }
+  .quiz .feedback.correct { background: #f0fff4; border: 1px solid #c6f6d5; }
+  .quiz .feedback.wrong { background: #fff5f5; border: 1px solid #fed7d7; }
+  .back-nav { display: block; font-size: 0.85em; color: #718096; text-decoration: none; margin-bottom: 1.5em; }
+  .back-nav:hover { color: #4a5568; }
+</style>
+</head>
+<body>
+<a class="back-nav" href="https://docs.speechwave.live/">&larr; docs.speechwave.live</a>
+
+<h1>Lesson 1: pattern matching</h1>
+<p><em>The single concept that unlocks reading Elixir code</em></p>
+
+<p>Open the <a href="https://github.com/speechwave-live/speechwave">public Speechwave repo</a> alongside this lesson, or just follow the file links below. Every example comes from the real codebase, and by the end you'll be able to read the pattern matching in any file in the project.</p>
+
+<blockquote>
+<strong>Primary source:</strong> <a href="https://elixir-lang.org/getting-started/pattern-matching.html">Elixir Getting Started: Pattern Matching</a> (official guide, ~10 min read). Read it after this lesson to solidify.
+</blockquote>
+
+<h2>The big shift: <code>=</code> is not assignment</h2>
+
+<p>In Ruby, <code>=</code> means "put this value in that box." In Elixir, <code>=</code> means "make the left side match the right side." This single difference changes how you read <em>every line of code</em>.</p>
+
+<div class="ruby">
+<strong>Ruby thinking:</strong> <code>x = 42</code> → "Store 42 in x"<br>
+<strong>Elixir thinking:</strong> <code>x = 42</code> → "Bind x so the left side matches the right side"
+</div>
+
+<p>When the left side is just a variable, it looks the same as assignment. The difference shows up when the left side has <em>structure</em>:</p>
+
+<pre><code>{:ok, result} = {:ok, 42}
+# result is now 42
+
+{:ok, result} = {:error, "not found"}
+# ** (MatchError), the atom :ok doesn't match :error</code></pre>
+
+<div class="key-insight">
+<strong>Key insight:</strong> Pattern matching is Elixir's primary control flow mechanism. Where Ruby uses <code>if/else</code>, Elixir often uses patterns that either match or don't.
+</div>
+
+<h2>Pattern 1: destructuring return values</h2>
+
+<p>The most common pattern in your codebase. Elixir functions return tagged tuples, <code>{:ok, value}</code> or <code>{:error, reason}</code>, and you match on the tag to handle each case.</p>
+
+<p class="file-ref"><a href="https://github.com/speechwave-live/speechwave/blob/main/lib/speechwave_web/live/dashboard_live.ex#L47-L67">lib/speechwave_web/live/dashboard_live.ex:47-67</a></p>
+<pre><code>case Talks.create_talk(scope, attrs) do
+  {:ok, talk} ->
+    # Success: talk is now bound to the created record
+    url = talk_url(talk)
+    # ...
+
+  {:error, changeset} ->
+    # Failure: changeset contains validation errors
+    {:noreply, assign(socket, form: to_form(changeset))}
+end</code></pre>
+
+<div class="ruby">
+<strong>Ruby equivalent would be something like:</strong>
+<pre><code>result = Talks.create_talk(scope, attrs)
+if result.success?
+  talk = result.value
+  # ...
+else
+  changeset = result.error
+  # ...
+end</code></pre>
+<p>In Elixir, the destructuring and the branching happen in one step. The <code>{:ok, talk}</code> pattern both <em>checks</em> that it succeeded and <em>extracts</em> the talk in a single expression.</p>
+</div>
+
+<h2>Pattern 2: multi-clause functions</h2>
+
+<p>In Ruby, you'd write one method with <code>if</code> statements inside. In Elixir, you write <em>multiple definitions</em> of the same function with different patterns. The runtime tries each clause top-to-bottom and uses the first one that matches.</p>
+
+<p class="file-ref"><a href="https://github.com/speechwave-live/speechwave/blob/main/lib/speechwave/talks.ex#L74-L82">lib/speechwave/talks.ex:74-82</a></p>
+<pre><code># Clause 1: session already ended (ended_at is not nil)
+def stop_session(%TalkSession{ended_at: ended_at} = session) when not is_nil(ended_at) do
+  {:ok, session}
+end
+
+# Clause 2: session still active (catches everything else)
+def stop_session(%TalkSession{} = session) do
+  session
+  |> TalkSession.changeset(%{ended_at: DateTime.utc_now() |> DateTime.truncate(:second)})
+  |> Repo.update()
+end</code></pre>
+
+<p>Let's unpack what's happening in that first clause:</p>
+<ul>
+  <li><code>%TalkSession{ended_at: ended_at}</code>: match only if the argument is a <code>TalkSession</code> struct, and bind its <code>ended_at</code> field to the variable <code>ended_at</code></li>
+  <li><code>= session</code>: <em>also</em> bind the entire struct to <code>session</code> (so you can return it)</li>
+  <li><code>when not is_nil(ended_at)</code>: a guard clause that only matches if <code>ended_at</code> has a value</li>
+</ul>
+
+<div class="ruby">
+<strong>Ruby equivalent:</strong>
+<pre><code>def stop_session(session)
+  return [:ok, session] if session.ended_at.present?
+
+  session.update!(ended_at: Time.current)
+  [:ok, session]
+end</code></pre>
+<p>The Elixir version encodes the condition <em>in the function signature</em>. You know which case you're in before you read the body.</p>
+</div>
+
+<h2>Pattern 3: matching map keys in function arguments</h2>
+
+<p>LiveView event handlers receive params as a map. Pattern matching pulls out exactly the keys you need, right in the function signature.</p>
+
+<p class="file-ref"><a href="https://github.com/speechwave-live/speechwave/blob/main/lib/speechwave_web/live/dashboard_live.ex#L126">lib/speechwave_web/live/dashboard_live.ex:126</a></p>
+<pre><code>def handle_event("save_rename", %{"rename" => %{"label" => label}}, socket) do</code></pre>
+
+<p>This one line does three things:</p>
+<ol>
+  <li>Matches only when the event name is <code>"save_rename"</code> (a string literal in the first argument)</li>
+  <li>Reaches into the nested map to extract <code>params["rename"]["label"]</code> and binds it to <code>label</code></li>
+  <li>Binds the socket so it's available in the function body</li>
+</ol>
+
+<div class="ruby">
+<strong>Ruby equivalent:</strong>
+<pre><code>def handle_event(event, params, socket)
+  return unless event == "save_rename"
+  label = params["rename"]["label"]
+  # ...
+end</code></pre>
+</div>
+
+<h2>Pattern 4: matching structs to enforce types</h2>
+
+<p>When you see <code>%Talk{}</code> in a function argument, it means "this function only accepts Talk structs." It's Elixir's way of doing type checking at the function boundary.</p>
+
+<p class="file-ref"><a href="https://github.com/speechwave-live/speechwave/blob/main/lib/speechwave/talks.ex#L40">lib/speechwave/talks.ex:40</a></p>
+<pre><code>def delete_talk(%Talk{} = talk), do: Repo.delete(talk)</code></pre>
+
+<p>The <code>%Talk{}</code> pattern matches any <code>Talk</code> struct regardless of field values. The <code>= talk</code> binds the whole struct. If you pass a plain map or a different struct, you get a <code>FunctionClauseError</code>.</p>
+
+<h2>Pattern 5: the Scope pattern</h2>
+
+<p>Your codebase uses a consistent pattern to extract the current user from a scope:</p>
+
+<p class="file-ref"><a href="https://github.com/speechwave-live/speechwave/blob/main/lib/speechwave/talks.ex#L26">lib/speechwave/talks.ex:26</a></p>
+<pre><code>def list_talks(%Scope{user: user}) do
+  Repo.all(from t in Talk, where: t.user_id == ^user.id, order_by: [desc: t.inserted_at])
+end</code></pre>
+
+<p>The <code>%Scope{user: user}</code> pattern does two things: it asserts the argument is a <code>Scope</code> struct, and it extracts the <code>user</code> field into a local variable. Every context function in Speechwave uses this pattern.</p>
+
+<h2>Pattern 6: ignoring values with <code>_</code></h2>
+
+<p>The underscore matches anything and throws it away. You'll see it constantly.</p>
+
+<p class="file-ref"><a href="https://github.com/speechwave-live/speechwave/blob/main/lib/speechwave/application.ex#L9">lib/speechwave/application.ex:9</a></p>
+<pre><code>def start(_type, _args) do</code></pre>
+
+<p>This says: "I receive two arguments but don't need either." The leading underscore on a named variable (<code>_type</code> vs plain <code>_</code>) is a convention. It documents what the ignored value represents while telling the compiler you intentionally aren't using it.</p>
+
+<p class="file-ref"><a href="https://github.com/speechwave-live/speechwave/blob/main/lib/speechwave_web/live/dashboard_live.ex#L30">lib/speechwave_web/live/dashboard_live.ex:30</a></p>
+<pre><code>def handle_params(_params, _uri, socket), do: {:noreply, socket}</code></pre>
+
+<p>Same idea: this LiveView callback is required but doesn't need the params or URI.</p>
+
+<h2>Pattern 7: pinning with <code>^</code></h2>
+
+<p>By default, variables on the left side of <code>=</code> get rebound to whatever matches. The <strong>pin operator</strong> <code>^</code> prevents this: it says "use this variable's current value and <em>match against it</em> instead of rebinding."</p>
+
+<pre><code>x = 1
+
+x = 2       # x is rebound to 2 (no pin, this is normal)
+
+^x = 3      # ** (MatchError), 2 doesn't match 3
+^x = 2      # succeeds, 2 matches 2</code></pre>
+
+<p>This is most useful inside <code>case</code> and function heads, where you want to match against a value you already have:</p>
+
+<pre><code>expected_slug = "my-talk"
+
+case Talks.get_talk_by_slug(slug) do
+  %Talk{slug: ^expected_slug} ->
+    # only matches if the talk's slug equals "my-talk"
+
+  %Talk{} ->
+    # matches any other talk
+end</code></pre>
+
+<p>Without the <code>^</code>, writing <code>%Talk{slug: expected_slug}</code> would <em>rebind</em> <code>expected_slug</code> to whatever the slug is, matching every talk, which isn't what you want.</p>
+
+<div class="ruby">
+<strong>Ruby parallel:</strong> Ruby doesn't have this problem because <code>case</code>/<code>when</code> always compares, never assigns. In Elixir, pattern matching does both. The pin operator is how you say "compare, don't assign."
+</div>
+
+<p>You'll also see <code>^</code> in Ecto queries, where it injects an Elixir value as a SQL parameter, the same idea of "use this value, don't treat it as a new binding." That usage is covered in <a href="0005-ecto-queries.html">Lesson 5</a>.</p>
+
+<hr>
+
+<h2>Practice: read the patterns</h2>
+
+<p>These quizzes use real code from Speechwave. Pick the answer that best describes what the pattern match does.</p>
+
+<div class="quiz" id="q1">
+  <h3>Question 1</h3>
+  <p>What does this pattern match extract?</p>
+  <pre><code>def handle_event("show_qr", %{"id" => id}, socket) do</code></pre>
+  <label><input type="radio" name="q1" value="a" onclick="checkAnswer('q1','c')"> Matches any event name, extracts the full params map and socket</label>
+  <label><input type="radio" name="q1" value="b" onclick="checkAnswer('q1','c')"> Matches the "show_qr" event, extracts all params as <code>id</code></label>
+  <label><input type="radio" name="q1" value="c" onclick="checkAnswer('q1','c')"> Matches only "show_qr" events, extracts the "id" key from params</label>
+  <label><input type="radio" name="q1" value="d" onclick="checkAnswer('q1','c')"> Creates a new variable called "show_qr" and maps it to the id</label>
+  <div class="feedback correct" id="q1-correct">Exactly. The string <code>"show_qr"</code> is a literal. It only matches that exact event. <code>%{"id" =&gt; id}</code> pulls the <code>"id"</code> key from the params map and binds its value to <code>id</code>. The rest of the map is ignored.</div>
+  <div class="feedback wrong" id="q1-wrong">Not quite. String literals in patterns must match exactly. <code>"show_qr"</code> is not a variable, it's a filter. And <code>%{"id" =&gt; id}</code> extracts just the <code>"id"</code> key, not the whole map. Try again.</div>
+</div>
+
+<div class="quiz" id="q2">
+  <h3>Question 2</h3>
+  <p>What happens when this code runs?</p>
+  <pre><code>{:ok, _} = Talks.delete_talk(talk)</code></pre>
+  <label><input type="radio" name="q2" value="a" onclick="checkAnswer('q2','b')"> It stores the delete result in the variable <code>_</code> for later use</label>
+  <label><input type="radio" name="q2" value="b" onclick="checkAnswer('q2','b')"> It asserts the delete succeeded, crashing if it returned <code>{:error, _}</code></label>
+  <label><input type="radio" name="q2" value="c" onclick="checkAnswer('q2','b')"> It silently catches any error from the delete operation</label>
+  <label><input type="radio" name="q2" value="d" onclick="checkAnswer('q2','b')"> It assigns the tuple <code>{:ok, _}</code> as a literal value to a variable</label>
+  <div class="feedback correct" id="q2-correct">Right. This is a deliberate crash-on-failure pattern. The <code>:ok</code> atom must match, so if <code>delete_talk</code> returns <code>{:error, reason}</code>, you get a <code>MatchError</code>. The <code>_</code> discards the second element (the deleted struct). This is idiomatic: "I expect this to succeed; if it doesn't, something is deeply wrong."</div>
+  <div class="feedback wrong" id="q2-wrong">Not quite. The underscore <code>_</code> isn't a usable variable. It discards the value. And the <code>:ok</code> atom is a literal that must match. This line is asserting success. Try again.</div>
+</div>
+
+<div class="quiz" id="q3">
+  <h3>Question 3</h3>
+  <p>Given this function head:</p>
+  <pre><code>def stop_session(%TalkSession{ended_at: ended_at} = session) when not is_nil(ended_at)</code></pre>
+  <p>What kind of argument will this clause match?</p>
+  <label><input type="radio" name="q3" value="a" onclick="checkAnswer('q3','d')"> Any map containing an <code>ended_at</code> key that is not nil</label>
+  <label><input type="radio" name="q3" value="b" onclick="checkAnswer('q3','d')"> Any TalkSession struct, regardless of ended_at value</label>
+  <label><input type="radio" name="q3" value="c" onclick="checkAnswer('q3','d')"> A TalkSession struct only when ended_at is exactly nil</label>
+  <label><input type="radio" name="q3" value="d" onclick="checkAnswer('q3','d')"> A TalkSession struct only when ended_at has a non-nil value</label>
+  <div class="feedback correct" id="q3-correct">Correct. Three things must be true: (1) the argument must be a <code>%TalkSession{}</code> struct, (2) its <code>ended_at</code> field is extracted and bound, (3) the guard <code>when not is_nil(ended_at)</code> further restricts to non-nil values. Plain maps won't match because the struct tag <code>%TalkSession{}</code> requires that specific struct type.</div>
+  <div class="feedback wrong" id="q3-wrong">Close, but check the guard clause. The <code>%TalkSession{}</code> restricts to that struct type (not any map), and <code>when not is_nil(ended_at)</code> restricts to non-nil values. Try again.</div>
+</div>
+
+<div class="quiz" id="q4">
+  <h3>Question 4</h3>
+  <p>In this <code>mount</code> function, what does the first line inside the body do?</p>
+  <pre><code>def mount(_params, _session, socket) do
+  scope = socket.assigns.current_scope
+  user = scope.user</code></pre>
+  <label><input type="radio" name="q4" value="a" onclick="checkAnswer('q4','a')"> Extracts the current scope and then the user via regular dot-access on the socket's assigns</label>
+  <label><input type="radio" name="q4" value="b" onclick="checkAnswer('q4','a')"> Pattern matches the socket struct to destructure scope and user</label>
+  <label><input type="radio" name="q4" value="c" onclick="checkAnswer('q4','a')"> Calls the <code>assigns</code> method on socket to find the current scope</label>
+  <label><input type="radio" name="q4" value="d" onclick="checkAnswer('q4','a')"> Creates a new scope struct and assigns it to the socket</label>
+  <div class="feedback correct" id="q4-correct">Yes. Not everything is pattern matching! <code>socket.assigns.current_scope</code> is dot-access on a nested map/struct, similar to Ruby's hash access. The <code>=</code> here works like simple binding because the left side is just a bare variable. Recognizing when <code>=</code> is a simple bind vs. a structural match is part of reading Elixir fluently.</div>
+  <div class="feedback wrong" id="q4-wrong">Look again. <code>scope = socket.assigns.current_scope</code> has a bare variable on the left. When the left side of <code>=</code> is just a variable, it's a simple bind (like assignment). The dot notation is map/struct field access, not method calls or destructuring. Try again.</div>
+</div>
+
+<hr>
+
+<h2>Your next step</h2>
+
+<p>Open <code>lib/speechwave/talks.ex</code> and read through it from top to bottom. For every <code>=</code>, <code>case</code>, and function head, ask yourself: <em>"What pattern is being matched here, and what gets bound?"</em></p>
+
+<p>You should now be able to identify:</p>
+<ul>
+  <li>Tagged tuple destructuring (<code>{:ok, value}</code>)</li>
+  <li>Struct matching (<code>%Talk{}</code>)</li>
+  <li>Map key extraction (<code>%{"key" => var}</code>)</li>
+  <li>Multi-clause functions (same name, different patterns)</li>
+  <li>Ignored values (<code>_</code> and <code>_name</code>)</li>
+</ul>
+
+<p>If anything is unclear, ask your teacher (the agent). That's what it's here for.</p>
+
+<div class="nav">
+  <strong>Reference:</strong> <a href="../reference/glossary.html">Glossary</a><br>
+  <strong>Next:</strong> <a href="0002-pipe-operator.html">The Pipe Operator &amp; Data Transformation</a>
+</div>
+
+<script>
+function checkAnswer(qid, correct) {
+  const selected = document.querySelector(`input[name="${qid}"]:checked`).value;
+  const correctEl = document.getElementById(`${qid}-correct`);
+  const wrongEl = document.getElementById(`${qid}-wrong`);
+  if (selected === correct) {
+    correctEl.style.display = 'block';
+    wrongEl.style.display = 'none';
+  } else {
+    wrongEl.style.display = 'block';
+    correctEl.style.display = 'none';
+  }
+}
+</script>
+
+</body>
+</html>

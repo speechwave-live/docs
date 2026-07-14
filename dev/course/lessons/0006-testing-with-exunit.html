@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lesson 6: testing with ExUnit</title>
+<style>
+  body {
+    font-family: 'Palatino Linotype', Palatino, 'Book Antiqua', Georgia, serif;
+    max-width: 42em; margin: 2em auto; padding: 0 1.5em;
+    line-height: 1.6; color: #222;
+  }
+  h1 { font-size: 1.6em; border-bottom: 2px solid #333; padding-bottom: 0.3em; }
+  h2 { font-size: 1.2em; margin-top: 2em; color: #1a1a2e; }
+  h3 { font-size: 1.05em; margin-top: 1.5em; }
+  pre {
+    background: #f8f8f8; border-left: 3px solid #4a5568;
+    padding: 1em 1.2em; overflow-x: auto; font-size: 0.9em;
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+    line-height: 1.45;
+  }
+  code {
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+    font-size: 0.88em; background: #f4f4f4; padding: 0.1em 0.3em; border-radius: 3px;
+  }
+  pre code { background: none; padding: 0; }
+  .file-ref { color: #718096; font-size: 0.85em; margin-bottom: -0.5em; }
+  .ruby { background: #fff5f5; border-left: 3px solid #c53030; padding: 0.8em 1em; margin: 1em 0; font-size: 0.92em; }
+  .ruby strong { color: #c53030; }
+  .key-insight { background: #f0fff4; border-left: 3px solid #38a169; padding: 0.8em 1em; margin: 1em 0; }
+  .key-insight strong { color: #276749; }
+  .warning { background: #fffaf0; border-left: 3px solid #dd6b20; padding: 0.8em 1em; margin: 1em 0; }
+  .warning strong { color: #c05621; }
+  blockquote { border-left: 3px solid #cbd5e0; padding-left: 1em; color: #4a5568; margin: 1.5em 0; }
+  .nav { font-size: 0.9em; color: #718096; margin-top: 3em; border-top: 1px solid #e2e8f0; padding-top: 1em; }
+  .nav a { color: #4a5568; }
+
+  .quiz { background: #fafafa; border: 1px solid #e2e8f0; border-radius: 6px; padding: 1.2em; margin: 1.5em 0; }
+  .quiz h3 { margin-top: 0; font-size: 1em; }
+  .quiz label { display: block; padding: 0.5em 0.8em; margin: 0.3em 0; border-radius: 4px; cursor: pointer; font-family: 'SF Mono', 'Fira Code', monospace; font-size: 0.9em; }
+  .quiz label:hover { background: #edf2f7; }
+  .quiz input[type="radio"] { margin-right: 0.5em; }
+  .quiz .feedback { display: none; padding: 0.8em; margin-top: 0.8em; border-radius: 4px; font-family: 'Palatino Linotype', Palatino, serif; font-size: 0.95em; }
+  .quiz .feedback.correct { background: #f0fff4; border: 1px solid #c6f6d5; }
+  .quiz .feedback.wrong { background: #fff5f5; border: 1px solid #fed7d7; }
+
+  table { border-collapse: collapse; margin: 1em 0; width: 100%; }
+  th, td { border: 1px solid #e2e8f0; padding: 0.5em 0.8em; text-align: left; font-size: 0.92em; }
+  th { background: #f7fafc; }
+
+  .diagram { background: #f8f8f8; border: 1px solid #e2e8f0; border-radius: 6px; padding: 1.2em; margin: 1.5em 0; font-family: 'SF Mono', 'Fira Code', monospace; font-size: 0.82em; line-height: 1.5; white-space: pre; overflow-x: auto; }
+  .back-nav { display: block; font-size: 0.85em; color: #718096; text-decoration: none; margin-bottom: 1.5em; }
+  .back-nav:hover { color: #4a5568; }
+</style>
+</head>
+<body>
+<a class="back-nav" href="https://docs.speechwave.live/">&larr; docs.speechwave.live</a>
+
+<h1>Lesson 6: testing with ExUnit</h1>
+<p><em>Reading and writing tests for Speechwave</em></p>
+
+<blockquote>
+<strong>Primary source:</strong> <a href="https://hexdocs.pm/ex_unit/ExUnit.html">ExUnit docs</a>, which cover all assertion macros and configuration options. For LiveView testing: <a href="https://hexdocs.pm/phoenix_live_view/Phoenix.LiveViewTest.html">Phoenix.LiveViewTest docs</a>.
+</blockquote>
+
+<h2>Test file organization</h2>
+
+<p>Speechwave's test directory mirrors the <code>lib/</code> structure:</p>
+
+<div class="diagram">test/
+├── test_helper.exs                    ← Runs once before all tests
+├── support/
+│   ├── data_case.ex                   ← Base for context tests (DB access)
+│   ├── conn_case.ex                   ← Base for web tests (HTTP + LiveView)
+│   ├── channel_case.ex                ← Base for channel tests
+│   └── fixtures/
+│       ├── accounts_fixtures.ex       ← Factory functions for users
+│       └── talks_fixtures.ex          ← Factory functions for talks
+├── speechwave/
+│   ├── talks_test.exs                 ← Tests for Speechwave.Talks context
+│   ├── reactions_test.exs             ← Tests for Speechwave.Reactions context
+│   └── ...
+└── speechwave_web/
+    ├── live/
+    │   ├── dashboard_live_test.exs    ← Tests for DashboardLive
+    │   ├── talk_live_test.exs         ← Tests for TalkLive
+    │   └── ...
+    └── controllers/</div>
+
+<div class="ruby">
+<strong>Rails mapping:</strong>
+<table>
+<tr><th>ExUnit / Phoenix</th><th>RSpec / Rails</th></tr>
+<tr><td><code>test/speechwave/talks_test.exs</code></td><td><code>spec/models/talk_spec.rb</code></td></tr>
+<tr><td><code>test/speechwave_web/live/</code></td><td><code>spec/features/</code> or <code>spec/system/</code></td></tr>
+<tr><td><code>test/support/fixtures/</code></td><td><code>spec/factories/</code> (FactoryBot)</td></tr>
+<tr><td><code>DataCase</code></td><td><code>rails_helper.rb</code> with DB cleaning</td></tr>
+<tr><td><code>ConnCase</code></td><td><code>rails_helper.rb</code> with request helpers</td></tr>
+</table>
+</div>
+
+<h2>Anatomy of a test file</h2>
+
+<p class="file-ref"><a href="https://github.com/speechwave-live/speechwave/blob/main/test/speechwave/reactions_test.exs">test/speechwave/reactions_test.exs</a></p>
+<pre><code>defmodule Speechwave.ReactionsTest do
+  use Speechwave.DataCase                         # 1. Base case
+
+  import Speechwave.AccountsFixtures              # 2. Fixture imports
+  import Speechwave.TalksFixtures
+
+  alias Speechwave.{Reactions, Talks}              # 3. Aliases
+
+  setup do                                         # 4. Shared setup
+    user = user_fixture()
+    talk = talk_fixture(user)
+    {:ok, session} = Talks.start_session(talk)
+    %{session: session}
+  end
+
+  describe "create_reaction/3" do                  # 5. Describe block
+    test "creates a reaction with default slide 0", %{session: session} do
+      assert {:ok, reaction} = Reactions.create_reaction(session, "❤️")
+      assert reaction.emoji == "❤️"
+      assert reaction.slide_number == 0
+    end
+  end
+end</code></pre>
+
+<p>Let's unpack each piece:</p>
+
+<h3>1. The base case: <code>use Speechwave.DataCase</code></h3>
+
+<p>This does three things:</p>
+<ul>
+  <li>Imports <code>Ecto</code>, <code>Ecto.Changeset</code>, <code>Ecto.Query</code>, and the <code>Repo</code> alias, so you can write queries in tests</li>
+  <li>Wraps every test in a <strong>database sandbox</strong>: each test runs in a transaction that's rolled back when the test ends, so tests never leave data behind</li>
+  <li>Provides <code>errors_on/1</code>, a helper for asserting on changeset validation errors</li>
+</ul>
+
+<p>For web/LiveView tests, you use <code>SpeechwaveWeb.ConnCase</code> instead, which does the same sandbox setup <em>plus</em> provides a <code>conn</code> (test HTTP connection) and login helpers.</p>
+
+<div class="key-insight">
+<strong>Key insight:</strong> The database sandbox is why you don't need a <code>DatabaseCleaner</code> gem. Every test automatically gets a clean database. Insert whatever you want, it's all rolled back. This is set up in <code>data_case.ex</code> and you never need to think about it.
+</div>
+
+<h3>2. Fixtures: the factory pattern</h3>
+
+<p>Speechwave uses fixture modules instead of a factory library. They work like simple factory functions:</p>
+
+<p class="file-ref"><a href="https://github.com/speechwave-live/speechwave/blob/main/test/support/fixtures/accounts_fixtures.ex#L17-L24">test/support/fixtures/accounts_fixtures.ex:17-24</a></p>
+<pre><code>def user_fixture(attrs \\ %{}) do
+  {:ok, user} =
+    attrs
+    |> valid_user_attributes()
+    |> Accounts.register_user()
+
+  user
+end</code></pre>
+
+<p>Call <code>user_fixture()</code> for defaults, or <code>user_fixture(%{email: "specific@example.com"})</code> to override. Each call generates a unique email using <code>System.unique_integer()</code>.</p>
+
+<div class="ruby">
+<strong>Rails equivalent:</strong>
+<pre><code># FactoryBot
+create(:user)
+create(:user, email: "specific@example.com")</code></pre>
+<p>Same idea. Phoenix just uses plain functions instead of a DSL. The <code>import Speechwave.AccountsFixtures</code> at the top of the test file makes <code>user_fixture()</code> available.</p>
+</div>
+
+<h3>3. <code>setup</code>: shared test data</h3>
+
+<p>The <code>setup</code> block runs before each test in the module (or in the enclosing <code>describe</code>). It returns a map that gets merged into the <strong>test context</strong>, the <code>%{session: session}</code> that tests receive via pattern matching.</p>
+
+<pre><code>setup do
+  user = user_fixture()
+  talk = talk_fixture(user)
+  {:ok, session} = Talks.start_session(talk)
+  %{session: session}                            # ← this map becomes the test context
+end
+
+test "uses the session", %{session: session} do  # ← pattern match to extract it
+  assert session.label == "Session 1"
+end</code></pre>
+
+<p>You can also reference setup functions by name:</p>
+
+<p class="file-ref"><a href="https://github.com/speechwave-live/speechwave/blob/main/test/speechwave_web/live/dashboard_live_test.exs#L10-L12">test/speechwave_web/live/dashboard_live_test.exs:10-12</a></p>
+<pre><code>setup %{conn: conn} do
+  user = user_fixture()
+  %{conn: log_in_user(conn, user), user: user}
+end</code></pre>
+
+<p>This setup receives the <code>conn</code> that <code>ConnCase</code> already provided, logs in a user, and passes both to the tests.</p>
+
+<div class="ruby">
+<strong>Rails equivalent:</strong>
+<pre><code># RSpec
+let(:user) { create(:user) }
+before { sign_in(user) }</code></pre>
+</div>
+
+<h3>4. <code>describe</code> and <code>test</code></h3>
+
+<p><code>describe</code> groups related tests. <code>test</code> defines a single test case. Both are exactly what you'd expect from RSpec's <code>describe</code>/<code>it</code>:</p>
+
+<pre><code>describe "create_reaction/3" do
+  test "creates a reaction with default slide 0", %{session: session} do
+    # ...
+  end
+
+  test "requires emoji", %{session: session} do
+    # ...
+  end
+end</code></pre>
+
+<p>Each <code>describe</code> can have its own <code>setup</code> that runs in addition to the module-level <code>setup</code>.</p>
+
+<h2>Assertions</h2>
+
+<p>ExUnit uses <code>assert</code> for everything. There's no <code>expect(...).to</code> DSL like RSpec. Pattern matching does the heavy lifting.</p>
+
+<table>
+<tr><th>ExUnit</th><th>RSpec equivalent</th><th>What it checks</th></tr>
+<tr><td><code>assert x == 42</code></td><td><code>expect(x).to eq(42)</code></td><td>Equality</td></tr>
+<tr><td><code>assert x</code></td><td><code>expect(x).to be_truthy</code></td><td>Truthy</td></tr>
+<tr><td><code>refute x</code></td><td><code>expect(x).to be_falsy</code></td><td>Falsy</td></tr>
+<tr><td><code>assert {:ok, val} = expr</code></td><td>n/a</td><td>Pattern match + bind</td></tr>
+<tr><td><code>assert x =~ "sub"</code></td><td><code>expect(x).to include("sub")</code></td><td>String contains / regex match</td></tr>
+<tr><td><code>assert x in list</code></td><td><code>expect(list).to include(x)</code></td><td>Membership</td></tr>
+<tr><td><code>assert_raise Error, fn</code></td><td><code>expect { }.to raise_error</code></td><td>Exception raised</td></tr>
+<tr><td><code>assert_receive msg</code></td><td>n/a</td><td>Process received message</td></tr>
+<tr><td><code>refute_receive msg</code></td><td>n/a</td><td>Process did <em>not</em> receive message</td></tr>
+</table>
+
+<h3>Pattern matching in assertions</h3>
+
+<p>The most powerful ExUnit pattern. When you write <code>assert</code> with <code>=</code>, it's a pattern match. It asserts the match succeeds <em>and</em> binds variables for further assertions:</p>
+
+<p class="file-ref"><a href="https://github.com/speechwave-live/speechwave/blob/main/test/speechwave/talks_test.exs#L48-L52">test/speechwave/talks_test.exs:48-52</a></p>
+<pre><code>assert {:ok, talk} =
+         Talks.create_talk(scope(user), %{
+           title: "Elixir for Rubyists",
+           slug: "elixir-for-rubyists"
+         })
+
+assert talk.title == "Elixir for Rubyists"
+assert talk.user_id == user.id</code></pre>
+
+<p>The first <code>assert</code> does two things: confirms the function returned <code>{:ok, _}</code> (not <code>{:error, _}</code>), and binds <code>talk</code> so the next assertions can inspect it.</p>
+
+<div class="key-insight">
+<strong>Key insight:</strong> <code>assert {:ok, talk} = ...</code> is the idiomatic way to test functions that return <code>{:ok, value}</code> / <code>{:error, changeset}</code>. If it returns an error, the pattern match fails and you get a clear test failure showing what was actually returned.
+</div>
+
+<h3>Testing for expected failures</h3>
+
+<p class="file-ref"><a href="https://github.com/speechwave-live/speechwave/blob/main/test/speechwave/talks_test.exs#L62-L63">test/speechwave/talks_test.exs:62-63</a></p>
+<pre><code>assert {:error, cs} = Talks.create_talk(scope(user), %{title: "Talk 2", slug: "my-talk"})
+assert "has already been taken" in errors_on(cs).slug</code></pre>
+
+<p>Pattern match on <code>{:error, cs}</code> to confirm it failed, then use <code>errors_on/1</code> (from <code>DataCase</code>) to check the specific validation message.</p>
+
+<p class="file-ref"><a href="https://github.com/speechwave-live/speechwave/blob/main/test/speechwave/talks_test.exs#L91-L93">test/speechwave/talks_test.exs:91-93</a></p>
+<pre><code>assert_raise Ecto.NoResultsError, fn ->
+  Talks.get_talk!(scope(user_b), talk.id)
+end</code></pre>
+
+<p><code>assert_raise</code> wraps the code in a function and asserts it raises the specified exception.</p>
+
+<h2>Testing LiveViews</h2>
+
+<p>Phoenix provides <code>Phoenix.LiveViewTest</code>, a module that lets you interact with LiveViews from tests without a browser.</p>
+
+<h3>Mounting a LiveView</h3>
+
+<p class="file-ref"><a href="https://github.com/speechwave-live/speechwave/blob/main/test/speechwave_web/live/dashboard_live_test.exs#L22-L24">test/speechwave_web/live/dashboard_live_test.exs:22-24</a></p>
+<pre><code>test "renders new talk form", %{conn: conn} do
+  {:ok, view, _html} = live(conn, "/dashboard")
+  assert has_element?(view, "#talk-form")
+end</code></pre>
+
+<p><code>live(conn, path)</code> mounts the LiveView and returns three things:</p>
+<ul>
+  <li><code>view</code>: a test handle for interacting with the LiveView process</li>
+  <li><code>html</code>: the initial rendered HTML (often ignored with <code>_html</code>)</li>
+  <li>The <code>{:ok, ...}</code> tuple, which you can match on to verify it mounted successfully</li>
+</ul>
+
+<h3>Simulating user actions</h3>
+
+<p>The key functions from <code>Phoenix.LiveViewTest</code>:</p>
+
+<table>
+<tr><th>Test function</th><th>Simulates</th><th>Template attribute</th></tr>
+<tr><td><code>render_click(view, event, params)</code></td><td>Button click</td><td><code>phx-click</code></td></tr>
+<tr><td><code>render_submit(view_or_form)</code></td><td>Form submit</td><td><code>phx-submit</code></td></tr>
+<tr><td><code>render_change(view_or_form, params)</code></td><td>Form field change</td><td><code>phx-change</code></td></tr>
+<tr><td><code>element(view, selector)</code></td><td>Targets a specific DOM element</td><td>n/a</td></tr>
+<tr><td><code>form(view, selector, data)</code></td><td>Targets a form with data</td><td>n/a</td></tr>
+<tr><td><code>render(view)</code></td><td>Returns current HTML</td><td>n/a</td></tr>
+</table>
+
+<p>Here's a complete interaction: creating a talk.</p>
+
+<p class="file-ref"><a href="https://github.com/speechwave-live/speechwave/blob/main/test/speechwave_web/live/dashboard_live_test.exs#L36-L46">test/speechwave_web/live/dashboard_live_test.exs:36-46</a></p>
+<pre><code>test "creates talk, shows banner, and selects talk with QR code", %{conn: conn} do
+  {:ok, view, _html} = live(conn, "/dashboard")
+
+  view
+  |> form("#talk-form", talk: %{title: "Elixir for Rubyists", slug: "elixir-for-rubyists"})
+  |> render_submit()
+
+  assert has_element?(view, "#created-talk")
+  refute has_element?(view, "#qr-code")
+  assert has_element?(view, "#selected-talk-qr")
+end</code></pre>
+
+<p>Read this as: mount the dashboard, fill in and submit the talk form, then assert the right elements appeared. The <code>form |> render_submit</code> pipe triggers the <code>"save"</code> event in <code>DashboardLive</code>'s <code>handle_event</code>.</p>
+
+<h3>Clicking specific elements</h3>
+
+<p class="file-ref"><a href="https://github.com/speechwave-live/speechwave/blob/main/test/speechwave_web/live/dashboard_live_test.exs#L82">test/speechwave_web/live/dashboard_live_test.exs:82</a></p>
+<pre><code>view |> element("#talk-list button", "Prime Talk") |> render_click()</code></pre>
+
+<p><code>element(view, selector, text_filter)</code> finds a DOM element matching the CSS selector <em>and</em> containing the given text. Then <code>render_click()</code> simulates clicking it.</p>
+
+<h3>Asserting on the DOM</h3>
+
+<table>
+<tr><th>Assertion</th><th>Checks</th></tr>
+<tr><td><code>has_element?(view, "#id")</code></td><td>Element exists</td></tr>
+<tr><td><code>has_element?(view, "#id", "text")</code></td><td>Element exists with text content</td></tr>
+<tr><td><code>render(view) =~ "text"</code></td><td>HTML contains string</td></tr>
+<tr><td><code>refute has_element?(view, "#id")</code></td><td>Element does <em>not</em> exist</td></tr>
+</table>
+
+<h3>Testing PubSub</h3>
+
+<p>The TalkLive tests verify real-time behavior by subscribing to PubSub from the test process:</p>
+
+<p class="file-ref"><a href="https://github.com/speechwave-live/speechwave/blob/main/test/speechwave_web/live/talk_live_test.exs#L29-L36">test/speechwave_web/live/talk_live_test.exs:29-36</a></p>
+<pre><code>test "react event broadcasts via Endpoint", %{conn: conn, talk: talk} do
+  {:ok, view, _html} = live(conn, "/t/#{talk.slug}")
+  Phoenix.PubSub.subscribe(Speechwave.PubSub, "reactions:#{talk.slug}")
+
+  render_click(view, "react", %{"emoji" => "❤️"})
+
+  assert_receive %Phoenix.Socket.Broadcast{
+    event: "new_reaction",
+    payload: %{emoji: "❤️"}
+  }, 500
+end</code></pre>
+
+<p>The test subscribes to the same PubSub topic, triggers the event, then <code>assert_receive</code> checks that the broadcast arrived within 500ms. The opposite, <code>refute_receive</code>, verifies a message was <em>not</em> sent (used for the rate limiting test).</p>
+
+<div class="key-insight">
+<strong>Key insight:</strong> <code>assert_receive</code> and <code>refute_receive</code> are process mailbox assertions. In Elixir, every process has a mailbox. PubSub delivers messages to the subscribing process's mailbox. The test process <em>is</em> a process, so it can subscribe and check its own mailbox. This is unique to Elixir. No Ruby equivalent exists.
+</div>
+
+<h2>Running tests</h2>
+
+<pre><code># Run all tests
+mix test
+
+# Run a specific file
+mix test test/speechwave/talks_test.exs
+
+# Run a specific test by line number
+mix test test/speechwave/talks_test.exs:48
+
+# Run tests matching a string
+mix test --only describe:"create_talk"
+
+# Run with verbose output (shows each test name)
+mix test --trace</code></pre>
+
+<div class="ruby">
+<strong>Rails:</strong> <code>mix test</code> = <code>bundle exec rspec</code>. The line number targeting works the same way as RSpec's <code>spec/file.rb:48</code>.
+</div>
+
+<hr>
+
+<h2>Practice</h2>
+
+<div class="quiz" id="q1">
+  <h3>Question 1</h3>
+  <p>What does this assertion do?</p>
+  <pre><code>assert {:ok, talk} = Talks.create_talk(scope(user), attrs)</code></pre>
+  <label><input type="radio" name="q1" value="a" onclick="checkAnswer('q1','c')"> Assigns the result to <code>talk</code> regardless of success or failure</label>
+  <label><input type="radio" name="q1" value="b" onclick="checkAnswer('q1','c')"> Checks that <code>talk</code> was already defined and equals the result</label>
+  <label><input type="radio" name="q1" value="c" onclick="checkAnswer('q1','c')"> Asserts the function returned <code>{:ok, _}</code> and binds the value to <code>talk</code> for further assertions</label>
+  <label><input type="radio" name="q1" value="d" onclick="checkAnswer('q1','c')"> Creates a new Talk variable and asserts it's valid</label>
+  <div class="feedback correct" id="q1-correct">Right. The <code>=</code> inside <code>assert</code> is a pattern match. If <code>create_talk</code> returns <code>{:error, changeset}</code>, the match fails and the test fails with a clear message showing the actual return value. If it returns <code>{:ok, talk}</code>, <code>talk</code> is bound and available for the rest of the test.</div>
+  <div class="feedback wrong" id="q1-wrong">Remember that <code>=</code> in Elixir is the match operator. Inside <code>assert</code>, a failed match causes a test failure. The left side is a pattern, not a plain variable assignment. Try again.</div>
+</div>
+
+<div class="quiz" id="q2">
+  <h3>Question 2</h3>
+  <p>What does the <code>setup</code> block return, and how do tests access it?</p>
+  <pre><code>setup do
+  user = user_fixture()
+  %{user: user}
+end
+
+test "does something", %{user: user} do</code></pre>
+  <label><input type="radio" name="q2" value="a" onclick="checkAnswer('q2','b')"> It returns a struct that tests access via <code>self.user</code></label>
+  <label><input type="radio" name="q2" value="b" onclick="checkAnswer('q2','b')"> It returns a map that gets merged into the test context, which tests pattern match in their second argument</label>
+  <label><input type="radio" name="q2" value="c" onclick="checkAnswer('q2','b')"> It defines module-level variables that tests access as <code>@user</code></label>
+  <label><input type="radio" name="q2" value="d" onclick="checkAnswer('q2','b')"> It stores data in the database that tests query for</label>
+  <div class="feedback correct" id="q2-correct">Correct. The <code>setup</code> block returns a map. ExUnit merges it into the test context (along with anything from the base case, like <code>conn</code> from ConnCase). Each test pattern matches the context in its argument: <code>%{user: user}</code> extracts the user. You only need to match the keys you use. Extra keys are ignored.</div>
+  <div class="feedback wrong" id="q2-wrong">Elixir doesn't have instance variables or <code>self</code> in this context. Look at how the test function's second argument relates to the map returned by <code>setup</code>. Try again.</div>
+</div>
+
+<div class="quiz" id="q3">
+  <h3>Question 3</h3>
+  <p>What does this test verify?</p>
+  <pre><code>render_click(view, "react", %{"emoji" => "❤️"})
+refute_receive %Phoenix.Socket.Broadcast{event: "new_reaction"}, 200</code></pre>
+  <label><input type="radio" name="q3" value="a" onclick="checkAnswer('q3','d')"> The click event was received by the LiveView process</label>
+  <label><input type="radio" name="q3" value="b" onclick="checkAnswer('q3','d')"> The reaction was saved to the database</label>
+  <label><input type="radio" name="q3" value="c" onclick="checkAnswer('q3','d')"> The emoji is displayed in the rendered HTML</label>
+  <label><input type="radio" name="q3" value="d" onclick="checkAnswer('q3','d')"> No PubSub broadcast was sent within 200ms (the reaction was rate-limited)</label>
+  <div class="feedback correct" id="q3-correct">Exactly. <code>refute_receive</code> waits the specified timeout (200ms) and asserts that no matching message arrived in the test process's mailbox. Since the test subscribed to PubSub earlier, this confirms the broadcast was suppressed, meaning the rate limiter blocked it.</div>
+  <div class="feedback wrong" id="q3-wrong"><code>refute_receive</code> is the opposite of <code>assert_receive</code>. It asserts that a message was <em>not</em> received. Think about what PubSub broadcast the test is checking for (or rather, checking is absent). Try again.</div>
+</div>
+
+<div class="quiz" id="q4">
+  <h3>Question 4</h3>
+  <p>Why does <code>DataCase</code> wrap tests in a database sandbox?</p>
+  <label><input type="radio" name="q4" value="a" onclick="checkAnswer('q4','c')"> To prevent tests from accessing production data</label>
+  <label><input type="radio" name="q4" value="b" onclick="checkAnswer('q4','c')"> To speed up tests by caching database queries</label>
+  <label><input type="radio" name="q4" value="c" onclick="checkAnswer('q4','c')"> So each test runs in a transaction that's rolled back afterward, giving every test a clean database automatically</label>
+  <label><input type="radio" name="q4" value="d" onclick="checkAnswer('q4','c')"> To allow tests to run in parallel by giving each its own database copy</label>
+  <div class="feedback correct" id="q4-correct">Right. Each test runs inside a database transaction. When the test ends (pass or fail), the transaction is rolled back, and all inserted data disappears. This means tests are fully isolated without needing to truncate tables or run cleanup hooks. It's the same concept as <code>DatabaseCleaner</code> in Ruby, but built into the framework.</div>
+  <div class="feedback wrong" id="q4-wrong">Think about what happens to the data that tests create (users, talks, sessions). How does each test start with a clean slate? Try again.</div>
+</div>
+
+<hr>
+
+<h2>Your next step</h2>
+
+<p>Try writing a test yourself. Open <code>test/speechwave/talks_test.exs</code> and add a test to the <code>"generate_slug/1"</code> describe block. For example, test what happens with leading/trailing spaces, or with all-special-character input. Run it with:</p>
+
+<pre><code>mix test test/speechwave/talks_test.exs --trace</code></pre>
+
+<p>Then read through <code>test/speechwave_web/live/dashboard_live_test.exs</code>. It's the most comprehensive LiveView test file in the project. For each test, trace the interaction: what <code>setup</code> provides, what user action is simulated, and what DOM assertion confirms the result.</p>
+
+<p>If anything is unclear, ask your teacher. That's what it's here for.</p>
+
+<div class="nav">
+  <strong>Previous:</strong> <a href="0005-ecto-queries.html">Ecto Queries</a> · <strong>Reference:</strong> <a href="../reference/glossary.html">Glossary</a><br>
+  <strong>Next:</strong> <a href="0007-genserver.html">GenServer, stateful processes</a>
+</div>
+
+<script>
+function checkAnswer(qid, correct) {
+  const selected = document.querySelector(`input[name="${qid}"]:checked`).value;
+  const correctEl = document.getElementById(`${qid}-correct`);
+  const wrongEl = document.getElementById(`${qid}-wrong`);
+  if (selected === correct) {
+    correctEl.style.display = 'block';
+    wrongEl.style.display = 'none';
+  } else {
+    wrongEl.style.display = 'block';
+    correctEl.style.display = 'none';
+  }
+}
+</script>
+
+</body>
+</html>

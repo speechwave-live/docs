@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lesson 2: the pipe operator &amp; data transformation</title>
+<style>
+  body {
+    font-family: 'Palatino Linotype', Palatino, 'Book Antiqua', Georgia, serif;
+    max-width: 42em; margin: 2em auto; padding: 0 1.5em;
+    line-height: 1.6; color: #222;
+  }
+  h1 { font-size: 1.6em; border-bottom: 2px solid #333; padding-bottom: 0.3em; }
+  h2 { font-size: 1.2em; margin-top: 2em; color: #1a1a2e; }
+  h3 { font-size: 1.05em; margin-top: 1.5em; }
+  pre {
+    background: #f8f8f8; border-left: 3px solid #4a5568;
+    padding: 1em 1.2em; overflow-x: auto; font-size: 0.9em;
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+    line-height: 1.45;
+  }
+  code {
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+    font-size: 0.88em; background: #f4f4f4; padding: 0.1em 0.3em; border-radius: 3px;
+  }
+  pre code { background: none; padding: 0; }
+  .file-ref { color: #718096; font-size: 0.85em; margin-bottom: -0.5em; }
+  .ruby { background: #fff5f5; border-left: 3px solid #c53030; padding: 0.8em 1em; margin: 1em 0; font-size: 0.92em; }
+  .ruby strong { color: #c53030; }
+  .key-insight { background: #f0fff4; border-left: 3px solid #38a169; padding: 0.8em 1em; margin: 1em 0; }
+  .key-insight strong { color: #276749; }
+  .warning { background: #fffaf0; border-left: 3px solid #dd6b20; padding: 0.8em 1em; margin: 1em 0; }
+  .warning strong { color: #c05621; }
+  blockquote { border-left: 3px solid #cbd5e0; padding-left: 1em; color: #4a5568; margin: 1.5em 0; }
+  .nav { font-size: 0.9em; color: #718096; margin-top: 3em; border-top: 1px solid #e2e8f0; padding-top: 1em; }
+  .nav a { color: #4a5568; }
+
+  .quiz { background: #fafafa; border: 1px solid #e2e8f0; border-radius: 6px; padding: 1.2em; margin: 1.5em 0; }
+  .quiz h3 { margin-top: 0; font-size: 1em; }
+  .quiz label { display: block; padding: 0.5em 0.8em; margin: 0.3em 0; border-radius: 4px; cursor: pointer; font-family: 'SF Mono', 'Fira Code', monospace; font-size: 0.9em; }
+  .quiz label:hover { background: #edf2f7; }
+  .quiz input[type="radio"] { margin-right: 0.5em; }
+  .quiz .feedback { display: none; padding: 0.8em; margin-top: 0.8em; border-radius: 4px; font-family: 'Palatino Linotype', Palatino, serif; font-size: 0.95em; }
+  .quiz .feedback.correct { background: #f0fff4; border: 1px solid #c6f6d5; }
+  .quiz .feedback.wrong { background: #fff5f5; border: 1px solid #fed7d7; }
+
+  table { border-collapse: collapse; margin: 1em 0; width: 100%; }
+  th, td { border: 1px solid #e2e8f0; padding: 0.5em 0.8em; text-align: left; font-size: 0.92em; }
+  th { background: #f7fafc; }
+  .back-nav { display: block; font-size: 0.85em; color: #718096; text-decoration: none; margin-bottom: 1.5em; }
+  .back-nav:hover { color: #4a5568; }
+</style>
+</head>
+<body>
+<a class="back-nav" href="https://docs.speechwave.live/">&larr; docs.speechwave.live</a>
+
+<h1>Lesson 2: the pipe operator &amp; data transformation</h1>
+<p><em>How Elixir replaces method chaining with something more powerful</em></p>
+
+<blockquote>
+<strong>Primary source:</strong> <a href="https://elixirschool.com/en/lessons/basics/pipe_operator">Elixir School: Pipe Operator</a> (5 min). For the Enum module: <a href="https://hexdocs.pm/elixir/Enum.html">hexdocs.pm/elixir/Enum</a>.
+</blockquote>
+
+<h2>The core idea</h2>
+
+<p>In Ruby, data transformations chain off the object: <code>"Hello".downcase.strip.gsub(...)</code>. The object carries the data, and each method returns a new object you keep calling methods on.</p>
+
+<p>Elixir has no objects. Data and functions are separate. The pipe operator <code>|&gt;</code> is the glue. It takes the result of the left side and passes it as the <strong>first argument</strong> to the function on the right.</p>
+
+<pre><code># These two are identical:
+String.trim(String.downcase(email))
+
+email |> String.downcase() |> String.trim()</code></pre>
+
+<p>Without pipes, you'd nest function calls inside-out (hard to read). With pipes, you read top-to-bottom, left-to-right, and the data flows through a pipeline of transformations.</p>
+
+<div class="key-insight">
+<strong>Key insight:</strong> The pipe always inserts into the <em>first</em> argument position. <code>x |&gt; f(a, b)</code> becomes <code>f(x, a, b)</code>. This is why Elixir libraries consistently put the "main data" as their first parameter, which makes everything pipe-friendly.
+</div>
+
+<h2>Three shapes you'll see in Speechwave</h2>
+
+<h3>Shape 1: string / data transformation</h3>
+
+<p>The simplest pipe chains: pure data in, transformed data out.</p>
+
+<p class="file-ref"><a href="https://github.com/speechwave-live/speechwave/blob/main/lib/speechwave/talks.ex#L141-L146">lib/speechwave/talks.ex:141-146</a></p>
+<pre><code>def generate_slug(title) do
+  title
+  |> String.downcase()
+  |> String.replace(~r/[^a-z0-9\s]/, "")
+  |> String.trim()
+  |> String.replace(~r/\s+/, "-")
+end</code></pre>
+
+<p>Read this as a recipe: "Take the title, lowercase it, strip non-alphanumeric characters, trim whitespace, replace spaces with hyphens." Each step receives the result of the previous step as its first argument.</p>
+
+<div class="ruby">
+<strong>Ruby equivalent:</strong>
+<pre><code>def generate_slug(title)
+  title
+    .downcase
+    .gsub(/[^a-z0-9\s]/, "")
+    .strip
+    .gsub(/\s+/, "-")
+end</code></pre>
+<p>Almost identical readability. The difference: Ruby calls methods <em>on</em> the string object. Elixir passes the string <em>into</em> free functions. This matters when you want to pipe through functions from different modules. In Elixir, everything pipes naturally.</p>
+</div>
+
+<p>Another example: generating an API key.</p>
+
+<p class="file-ref"><a href="https://github.com/speechwave-live/speechwave/blob/main/lib/speechwave/accounts.ex#L53">lib/speechwave/accounts.ex:53</a></p>
+<pre><code>new_key = :crypto.strong_rand_bytes(32) |> Base.encode16(case: :lower)</code></pre>
+
+<p>This pipes across two completely different modules (<code>:crypto</code> from Erlang, <code>Base</code> from Elixir). In Ruby, you'd need to wrap the result: <code>Base.encode16(crypto_output)</code>. Here, the pipe handles it seamlessly.</p>
+
+<h3>Shape 2: the changeset pipeline</h3>
+
+<p>This is the most common pipe pattern in Phoenix apps. You'll see it dozens of times in Speechwave:</p>
+
+<p class="file-ref"><a href="https://github.com/speechwave-live/speechwave/blob/main/lib/speechwave/accounts.ex#L174-L177">lib/speechwave/accounts.ex:174-177</a></p>
+<pre><code>def register_user(attrs) do
+  %User{}
+  |> User.email_changeset(attrs)
+  |> Repo.insert()
+end</code></pre>
+
+<p>Read it as: "Start with an empty User struct, build a changeset with validations, then insert into the database." The data flows: <code>struct → changeset → database result</code>.</p>
+
+<p>A longer version with more steps:</p>
+
+<p class="file-ref"><a href="https://github.com/speechwave-live/speechwave/blob/main/lib/speechwave/accounts.ex#L55-L57">lib/speechwave/accounts.ex:55-57</a></p>
+<pre><code>user
+|> Ecto.Changeset.change(api_key: new_key)
+|> Repo.update()</code></pre>
+
+<p>And from Talks:</p>
+
+<p class="file-ref"><a href="https://github.com/speechwave-live/speechwave/blob/main/lib/speechwave/talks.ex#L35-L37">lib/speechwave/talks.ex:35-37</a></p>
+<pre><code>%Talk{user_id: user.id}
+|> Talk.changeset(attrs)
+|> Repo.insert()</code></pre>
+
+<div class="key-insight">
+<strong>Key insight:</strong> The changeset pipeline is Elixir's replacement for ActiveRecord. Instead of <code>user.update!(api_key: new_key)</code>, you build a data structure describing the change (the changeset), then explicitly hand it to the database layer. This separation is why Ecto validations compose so cleanly. The changeset is just data you can inspect, transform, or reject before persisting.
+</div>
+
+<h3>Shape 3: the conn / socket pipeline</h3>
+
+<p>In Phoenix, HTTP requests flow through plug pipelines, and LiveView events flow through socket transformations. Both use pipes heavily.</p>
+
+<p class="file-ref"><a href="https://github.com/speechwave-live/speechwave/blob/main/lib/speechwave_web/user_auth.ex#L45-L47">lib/speechwave_web/user_auth.ex:45-47</a></p>
+<pre><code>conn
+|> create_or_extend_session(user, params)
+|> redirect(to: user_return_to || signed_in_path(conn))</code></pre>
+
+<p class="file-ref"><a href="https://github.com/speechwave-live/speechwave/blob/main/lib/speechwave_web/user_auth.ex#L63-L65">lib/speechwave_web/user_auth.ex:63-65</a></p>
+<pre><code>conn
+|> renew_session(nil)
+|> delete_resp_cookie(@remember_me_cookie, @remember_me_options)
+|> redirect(to: ~p"/")</code></pre>
+
+<p>And the LiveView equivalent: chaining <code>assign</code> calls on a socket.</p>
+
+<p class="file-ref"><a href="https://github.com/speechwave-live/speechwave/blob/main/lib/speechwave_web/live/dashboard_live.ex#L132-L134">lib/speechwave_web/live/dashboard_live.ex:132-134</a></p>
+<pre><code>socket
+|> assign(renaming_session_id: nil, rename_form: nil)
+|> assign(sessions: Talks.list_sessions(socket.assigns.selected_talk.id))</code></pre>
+
+<div class="ruby">
+<strong>Ruby/Rails equivalent:</strong>
+<pre><code># Rack-style (conceptually)
+response = conn
+  .create_session(user, params)
+  .redirect(to: path)
+
+# But Rails hides this, you just call redirect_to
+# and the framework handles the response object</code></pre>
+<p>Phoenix makes the transformation chain explicit. The <code>conn</code> (connection) is immutable. Each function returns a <em>new</em> conn with changes applied. Same with the LiveView <code>socket</code>.</p>
+</div>
+
+<h2>The Enum module: pipes + collections</h2>
+
+<p>When pipes meet collections, you use the <code>Enum</code> module. It's Elixir's equivalent of Ruby's <code>Enumerable</code> methods, but as standalone functions.</p>
+
+<p class="file-ref"><a href="https://github.com/speechwave-live/speechwave/blob/main/lib/speechwave_web/live/session_analytics_live.ex#L57-L62">lib/speechwave_web/live/session_analytics_live.ex:57-62</a></p>
+<pre><code>defp group_by_slide(totals) do
+  totals
+  |> Enum.group_by(& &1.slide_number)
+  |> Map.new(fn {slide, entries} ->
+    {slide, Enum.map(entries, &%{emoji: &1.emoji, count: &1.count})}
+  end)
+end</code></pre>
+
+<p>Let's unpack this step by step:</p>
+
+<ol>
+  <li><code>totals</code>: a list of maps like <code>%{slide_number: 1, emoji: "👍", count: 12}</code></li>
+  <li><code>Enum.group_by(& &1.slide_number)</code>: groups the list by slide number, producing a map of <code>%{1 => [entries...], 2 => [entries...]}</code></li>
+  <li><code>Map.new(fn {slide, entries} -> ... end)</code>: transforms each group, keeping only <code>emoji</code> and <code>count</code></li>
+</ol>
+
+<h3>The capture operator: <code>&amp;</code></h3>
+
+<p>You'll notice <code>&amp; &amp;1.slide_number</code> in the example above. This is Elixir's shorthand for anonymous functions:</p>
+
+<table>
+<tr><th>Shorthand</th><th>Full form</th><th>Ruby equivalent</th></tr>
+<tr><td><code>&amp; &amp;1.slide_number</code></td><td><code>fn x -&gt; x.slide_number end</code></td><td><code>&amp;:slide_number</code> / <code>{|x| x.slide_number}</code></td></tr>
+<tr><td><code>&amp;(&amp;1 + 1)</code></td><td><code>fn x -&gt; x + 1 end</code></td><td><code>{|x| x + 1}</code></td></tr>
+<tr><td><code>&amp;String.upcase/1</code></td><td><code>fn x -&gt; String.upcase(x) end</code></td><td><code>&amp;:upcase</code> / <code>method(:upcase)</code></td></tr>
+</table>
+
+<p><code>&amp;1</code> is the first argument, <code>&amp;2</code> the second, and so on. The <code>&amp;</code> prefix converts the expression into an anonymous function.</p>
+
+<p>Here's a simpler Enum example from your codebase:</p>
+
+<p class="file-ref"><a href="https://github.com/speechwave-live/speechwave/blob/main/lib/speechwave_web/live/session_analytics_live.ex#L23-L24">lib/speechwave_web/live/session_analytics_live.ex:23-24</a></p>
+<pre><code>other_sessions =
+  Talks.list_sessions(talk.id)
+  |> Enum.reject(fn %{session: s} -> s.id == session.id end)</code></pre>
+
+<p>This pipes the sessions list into <code>Enum.reject</code>, filtering out the current session. Notice the pattern match inside the anonymous function. <code>%{session: s}</code> destructures the map to get the session, right in the function argument.</p>
+
+<div class="ruby">
+<strong>Ruby equivalent:</strong>
+<pre><code>other_sessions = talk.sessions.reject { |entry| entry[:session].id == session.id }</code></pre>
+</div>
+
+<h3>Common Enum functions (Ruby translations)</h3>
+
+<table>
+<tr><th>Elixir</th><th>Ruby</th></tr>
+<tr><td><code>Enum.map(list, &amp;fun)</code></td><td><code>list.map(&amp;fun)</code></td></tr>
+<tr><td><code>Enum.filter(list, &amp;fun)</code></td><td><code>list.select(&amp;fun)</code></td></tr>
+<tr><td><code>Enum.reject(list, &amp;fun)</code></td><td><code>list.reject(&amp;fun)</code></td></tr>
+<tr><td><code>Enum.find(list, &amp;fun)</code></td><td><code>list.find(&amp;fun)</code> / <code>list.detect(&amp;fun)</code></td></tr>
+<tr><td><code>Enum.reduce(list, acc, &amp;fun)</code></td><td><code>list.inject(acc, &amp;fun)</code></td></tr>
+<tr><td><code>Enum.group_by(list, &amp;fun)</code></td><td><code>list.group_by(&amp;fun)</code></td></tr>
+<tr><td><code>Enum.count(list)</code></td><td><code>list.count</code></td></tr>
+<tr><td><code>Enum.any?(list, &amp;fun)</code></td><td><code>list.any?(&amp;fun)</code></td></tr>
+<tr><td><code>Enum.each(list, &amp;fun)</code></td><td><code>list.each(&amp;fun)</code></td></tr>
+</table>
+
+<div class="warning">
+<strong>Key difference from Ruby:</strong> In Ruby, <code>.map</code> is a method on the Array. In Elixir, <code>Enum.map</code> is a function that takes any enumerable as its first argument. This means you always pipe <em>into</em> Enum, and you can use it with any data type that implements the Enumerable protocol (lists, maps, ranges, streams).
+</div>
+
+<h2>When pipes break: intermediate values</h2>
+
+<p>Sometimes the data doesn't flow cleanly in one pipe. Your codebase handles this by binding intermediate values:</p>
+
+<p class="file-ref"><a href="https://github.com/speechwave-live/speechwave/blob/main/lib/speechwave/qr_code.ex#L9-L16">lib/speechwave/qr_code.ex:9-16</a></p>
+<pre><code>def to_data_uri(url) do
+  png_binary =
+    url
+    |> EQRCode.encode()
+    |> EQRCode.png()
+    |> IO.iodata_to_binary()
+
+  "data:image/png;base64," <> Base.encode64(png_binary)
+end</code></pre>
+
+<p>The pipe chain produces the binary PNG data, which gets bound to <code>png_binary</code>. Then a separate expression builds the final data URI string. This is cleaner than trying to force the string concatenation into the pipe.</p>
+
+<div class="key-insight">
+<strong>Key insight:</strong> Don't force everything into one pipe. If the result needs to be used in a different shape than "first argument to the next function," break the chain and bind an intermediate variable. Clarity beats cleverness.
+</div>
+
+<h2>Combining lessons 1 &amp; 2: pattern match + pipe</h2>
+
+<p>The real power emerges when you combine pattern matching with pipes. Here's a pattern you'll see throughout your codebase:</p>
+
+<p class="file-ref"><a href="https://github.com/speechwave-live/speechwave/blob/main/lib/speechwave/talks.ex#L78-L81">lib/speechwave/talks.ex:78-81</a></p>
+<pre><code>def stop_session(%TalkSession{} = session) do
+  session
+  |> TalkSession.changeset(%{ended_at: DateTime.utc_now() |> DateTime.truncate(:second)})
+  |> Repo.update()
+end</code></pre>
+
+<p>Pattern matching selects <em>which</em> function clause runs. The pipe orchestrates <em>what happens</em> inside that clause. Together, they replace the Ruby pattern of "one big method with conditionals and method chains."</p>
+
+<p>And from the <code>with</code> construct (a topic for a future lesson, but worth previewing):</p>
+
+<p class="file-ref"><a href="https://github.com/speechwave-live/speechwave/blob/main/lib/speechwave/accounts.ex#L226-L234">lib/speechwave/accounts.ex:226-234</a></p>
+<pre><code>with {:ok, user} <- register_or_get_user_by_email(email),
+     {:ok, _identity} <-
+       %UserIdentity{}
+       |> UserIdentity.changeset(%{provider: provider, uid: uid, user_id: user.id})
+       |> Repo.insert() do
+  user
+else
+  {:error, reason} -> Repo.rollback(reason)
+end</code></pre>
+
+<p>Here, a pipe chain lives <em>inside</em> a <code>with</code> clause. The pipe builds and inserts the identity; the <code>with</code> pattern matches the result to decide whether to continue or roll back.</p>
+
+<hr>
+
+<h2>Practice</h2>
+
+<div class="quiz" id="q1">
+  <h3>Question 1</h3>
+  <p>What does this expression evaluate to?</p>
+  <pre><code>"  Hello World  " |> String.trim() |> String.downcase() |> String.split()</code></pre>
+  <label><input type="radio" name="q1" value="a" onclick="checkAnswer('q1','c')"> <code>"hello world"</code></label>
+  <label><input type="radio" name="q1" value="b" onclick="checkAnswer('q1','c')"> <code>"helloworld"</code></label>
+  <label><input type="radio" name="q1" value="c" onclick="checkAnswer('q1','c')"> <code>["hello", "world"]</code></label>
+  <label><input type="radio" name="q1" value="d" onclick="checkAnswer('q1','c')"> <code>[" hello", "world "]</code></label>
+  <div class="feedback correct" id="q1-correct">Right. Trim removes surrounding whitespace → <code>"Hello World"</code>. Downcase → <code>"hello world"</code>. Split (with no separator) splits on whitespace → <code>["hello", "world"]</code>. Each step pipes its result as the first argument to the next function.</div>
+  <div class="feedback wrong" id="q1-wrong">Trace through each step. <code>String.trim/1</code> removes surrounding whitespace. <code>String.downcase/1</code> lowercases. <code>String.split/1</code> with no argument splits on whitespace and returns a <em>list</em>. Try again.</div>
+</div>
+
+<div class="quiz" id="q2">
+  <h3>Question 2</h3>
+  <p>Rewrite this nested expression using the pipe operator:</p>
+  <pre><code>Repo.insert(Talk.changeset(%Talk{user_id: 1}, %{title: "Demo"}))</code></pre>
+  <p>Which is the correct pipe version?</p>
+  <label><input type="radio" name="q2" value="a" onclick="checkAnswer('q2','b')"> <code>%Talk{user_id: 1} |> Repo.insert() |> Talk.changeset(%{title: "Demo"})</code></label>
+  <label><input type="radio" name="q2" value="b" onclick="checkAnswer('q2','b')"> <code>%Talk{user_id: 1} |> Talk.changeset(%{title: "Demo"}) |> Repo.insert()</code></label>
+  <label><input type="radio" name="q2" value="c" onclick="checkAnswer('q2','b')"> <code>Talk.changeset(%{title: "Demo"}) |> %Talk{user_id: 1} |> Repo.insert()</code></label>
+  <label><input type="radio" name="q2" value="d" onclick="checkAnswer('q2','b')"> <code>%{title: "Demo"} |> Talk.changeset(%Talk{user_id: 1}) |> Repo.insert()</code></label>
+  <div class="feedback correct" id="q2-correct">Correct. Start with the struct, pipe into <code>changeset</code> (struct becomes the first arg, attrs is the second), then pipe the changeset into <code>Repo.insert</code>. This is the standard changeset pipeline pattern you'll see throughout Speechwave.</div>
+  <div class="feedback wrong" id="q2-wrong">Remember: the pipe inserts the left side as the <em>first</em> argument. Unwrap the nested calls from inside-out: the innermost value is the starting point, each wrapping function becomes the next step. Try again.</div>
+</div>
+
+<div class="quiz" id="q3">
+  <h3>Question 3</h3>
+  <p>What does <code>&amp; &amp;1.emoji</code> expand to?</p>
+  <label><input type="radio" name="q3" value="a" onclick="checkAnswer('q3','b')"> <code>fn -> emoji end</code></label>
+  <label><input type="radio" name="q3" value="b" onclick="checkAnswer('q3','b')"> <code>fn x -> x.emoji end</code></label>
+  <label><input type="radio" name="q3" value="c" onclick="checkAnswer('q3','b')"> <code>fn x, emoji -> x end</code></label>
+  <label><input type="radio" name="q3" value="d" onclick="checkAnswer('q3','b')"> <code>fn emoji -> emoji end</code></label>
+  <div class="feedback correct" id="q3-correct">Exactly. <code>&amp;1</code> represents the first argument to the anonymous function. <code>&amp;1.emoji</code> accesses the <code>emoji</code> field on that argument. The leading <code>&amp;</code> wraps the whole expression into <code>fn x -> x.emoji end</code>.</div>
+  <div class="feedback wrong" id="q3-wrong">The <code>&amp;</code> prefix creates an anonymous function. <code>&amp;1</code> refers to its first argument. So <code>&amp; &amp;1.emoji</code> is a function that takes one argument and accesses its <code>.emoji</code> field. Try again.</div>
+</div>
+
+<div class="quiz" id="q4">
+  <h3>Question 4</h3>
+  <p>Why is this pipe chain split into two parts?</p>
+  <pre><code>png_binary =
+  url
+  |> EQRCode.encode()
+  |> EQRCode.png()
+  |> IO.iodata_to_binary()
+
+"data:image/png;base64," <> Base.encode64(png_binary)</code></pre>
+  <label><input type="radio" name="q4" value="a" onclick="checkAnswer('q4','c')"> The pipe operator cannot call <code>Base.encode64</code></label>
+  <label><input type="radio" name="q4" value="b" onclick="checkAnswer('q4','c')"> Each pipe chain can only have three steps</label>
+  <label><input type="radio" name="q4" value="c" onclick="checkAnswer('q4','c')"> The string concatenation needs the result in second position, not first</label>
+  <label><input type="radio" name="q4" value="d" onclick="checkAnswer('q4','c')"> Splitting improves performance by enabling lazy evaluation</label>
+  <div class="feedback correct" id="q4-correct">Right. The <code>&lt;&gt;</code> string concatenation puts the prefix string first and the encoded result second. Since pipes always insert into the <em>first</em> argument position, you can't naturally pipe into the second position of <code>&lt;&gt;</code>. Binding the intermediate result is the clean solution.</div>
+  <div class="feedback wrong" id="q4-wrong">Think about the pipe rule: it always inserts into the <em>first</em> argument position. The final expression is <code>"data:..." &lt;&gt; Base.encode64(png_binary)</code>. Where would the piped value go? Try again.</div>
+</div>
+
+<hr>
+
+<h2>Your next step</h2>
+
+<p>Open <code>lib/speechwave_web/user_auth.ex</code> and trace the pipe chains. For each one, identify:</p>
+<ul>
+  <li>What's the starting value? (usually <code>conn</code> or <code>socket</code>)</li>
+  <li>What does each step add or change?</li>
+  <li>What's the final result?</li>
+</ul>
+
+<p>Then open <code>lib/speechwave/accounts.ex</code> and find every changeset pipeline. They all follow the same shape: <code>struct |&gt; changeset(attrs) |&gt; Repo.insert/update</code>.</p>
+
+<p>If the capture operator (<code>&amp;</code>) still feels unclear, try rewriting <code>&amp; &amp;1.emoji</code> as <code>fn x -> x.emoji end</code> in your head every time you see it. The shorthand will become natural within a few readings.</p>
+
+<p>If anything is unclear, ask your teacher. That's what it's here for.</p>
+
+<div class="nav">
+  <strong>Previous:</strong> <a href="0001-pattern-matching.html">Pattern Matching</a> · <strong>Reference:</strong> <a href="../reference/glossary.html">Glossary</a><br>
+  <strong>Next:</strong> <a href="0003-modules-and-structs.html">Modules, Structs &amp; the Shape of an Elixir Project</a>
+</div>
+
+<script>
+function checkAnswer(qid, correct) {
+  const selected = document.querySelector(`input[name="${qid}"]:checked`).value;
+  const correctEl = document.getElementById(`${qid}-correct`);
+  const wrongEl = document.getElementById(`${qid}-wrong`);
+  if (selected === correct) {
+    correctEl.style.display = 'block';
+    wrongEl.style.display = 'none';
+  } else {
+    wrongEl.style.display = 'block';
+    correctEl.style.display = 'none';
+  }
+}
+</script>
+
+</body>
+</html>

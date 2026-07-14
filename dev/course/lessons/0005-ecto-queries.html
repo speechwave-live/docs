@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lesson 5: Ecto queries, reading and writing database code</title>
+<style>
+  body {
+    font-family: 'Palatino Linotype', Palatino, 'Book Antiqua', Georgia, serif;
+    max-width: 42em; margin: 2em auto; padding: 0 1.5em;
+    line-height: 1.6; color: #222;
+  }
+  h1 { font-size: 1.6em; border-bottom: 2px solid #333; padding-bottom: 0.3em; }
+  h2 { font-size: 1.2em; margin-top: 2em; color: #1a1a2e; }
+  h3 { font-size: 1.05em; margin-top: 1.5em; }
+  pre {
+    background: #f8f8f8; border-left: 3px solid #4a5568;
+    padding: 1em 1.2em; overflow-x: auto; font-size: 0.9em;
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+    line-height: 1.45;
+  }
+  code {
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+    font-size: 0.88em; background: #f4f4f4; padding: 0.1em 0.3em; border-radius: 3px;
+  }
+  pre code { background: none; padding: 0; }
+  .file-ref { color: #718096; font-size: 0.85em; margin-bottom: -0.5em; }
+  .ruby { background: #fff5f5; border-left: 3px solid #c53030; padding: 0.8em 1em; margin: 1em 0; font-size: 0.92em; }
+  .ruby strong { color: #c53030; }
+  .key-insight { background: #f0fff4; border-left: 3px solid #38a169; padding: 0.8em 1em; margin: 1em 0; }
+  .key-insight strong { color: #276749; }
+  .warning { background: #fffaf0; border-left: 3px solid #dd6b20; padding: 0.8em 1em; margin: 1em 0; }
+  .warning strong { color: #c05621; }
+  blockquote { border-left: 3px solid #cbd5e0; padding-left: 1em; color: #4a5568; margin: 1.5em 0; }
+  .nav { font-size: 0.9em; color: #718096; margin-top: 3em; border-top: 1px solid #e2e8f0; padding-top: 1em; }
+  .nav a { color: #4a5568; }
+
+  .quiz { background: #fafafa; border: 1px solid #e2e8f0; border-radius: 6px; padding: 1.2em; margin: 1.5em 0; }
+  .quiz h3 { margin-top: 0; font-size: 1em; }
+  .quiz label { display: block; padding: 0.5em 0.8em; margin: 0.3em 0; border-radius: 4px; cursor: pointer; font-family: 'SF Mono', 'Fira Code', monospace; font-size: 0.9em; }
+  .quiz label:hover { background: #edf2f7; }
+  .quiz input[type="radio"] { margin-right: 0.5em; }
+  .quiz .feedback { display: none; padding: 0.8em; margin-top: 0.8em; border-radius: 4px; font-family: 'Palatino Linotype', Palatino, serif; font-size: 0.95em; }
+  .quiz .feedback.correct { background: #f0fff4; border: 1px solid #c6f6d5; }
+  .quiz .feedback.wrong { background: #fff5f5; border: 1px solid #fed7d7; }
+
+  table { border-collapse: collapse; margin: 1em 0; width: 100%; }
+  th, td { border: 1px solid #e2e8f0; padding: 0.5em 0.8em; text-align: left; font-size: 0.92em; }
+  th { background: #f7fafc; }
+  .back-nav { display: block; font-size: 0.85em; color: #718096; text-decoration: none; margin-bottom: 1.5em; }
+  .back-nav:hover { color: #4a5568; }
+</style>
+</head>
+<body>
+<a class="back-nav" href="https://docs.speechwave.live/">&larr; docs.speechwave.live</a>
+
+<h1>Lesson 5: Ecto queries</h1>
+<p><em>Reading and writing database code in Speechwave</em></p>
+
+<blockquote>
+<strong>Primary source:</strong> <a href="https://hexdocs.pm/ecto/Ecto.Query.html">Ecto.Query docs</a>, the definitive reference for query syntax. Run <code>mix hex.docs offline ecto</code> to browse with search.
+</blockquote>
+
+<h2>Two layers: Repo and Query</h2>
+
+<p>Ecto splits database work into two distinct parts:</p>
+
+<ul>
+  <li><strong>Repo</strong>: executes operations against the database. It's the only module that talks to SQLite/Postgres.</li>
+  <li><strong>Query</strong>: builds the SQL as a data structure. It doesn't touch the database until you hand it to Repo.</li>
+</ul>
+
+<p>This separation means you can build a query, inspect it, compose it with other queries, and only execute it when ready. ActiveRecord does something similar under the hood, but Ecto makes it explicit.</p>
+
+<h2>Repo: The seven operations</h2>
+
+<p>Almost every database call in Speechwave uses one of these <code>Repo</code> functions:</p>
+
+<table>
+<tr><th>Function</th><th>Does</th><th>Returns</th><th>ActiveRecord equivalent</th></tr>
+<tr><td><code>Repo.get(Schema, id)</code></td><td>Find by primary key</td><td>struct or <code>nil</code></td><td><code>find_by(id:)</code></td></tr>
+<tr><td><code>Repo.get!(Schema, id)</code></td><td>Find by primary key</td><td>struct or raises</td><td><code>find(id)</code></td></tr>
+<tr><td><code>Repo.get_by(Schema, clauses)</code></td><td>Find by column(s)</td><td>struct or <code>nil</code></td><td><code>find_by(col: val)</code></td></tr>
+<tr><td><code>Repo.get_by!(Schema, clauses)</code></td><td>Find by column(s)</td><td>struct or raises</td><td><code>find_by!(col: val)</code></td></tr>
+<tr><td><code>Repo.one(query)</code></td><td>Run query, expect 0-1 result</td><td>struct or <code>nil</code></td><td><code>.first</code></td></tr>
+<tr><td><code>Repo.all(query)</code></td><td>Run query, return all results</td><td>list</td><td><code>.to_a</code> / <code>.all</code></td></tr>
+<tr><td><code>Repo.aggregate(query, :count)</code></td><td>Run aggregate</td><td>integer</td><td><code>.count</code></td></tr>
+<tr><td><code>Repo.insert(changeset)</code></td><td>Insert a record</td><td><code>{:ok, struct}</code> or <code>{:error, changeset}</code></td><td><code>.save</code></td></tr>
+<tr><td><code>Repo.update(changeset)</code></td><td>Update a record</td><td><code>{:ok, struct}</code> or <code>{:error, changeset}</code></td><td><code>.save</code></td></tr>
+<tr><td><code>Repo.delete(struct)</code></td><td>Delete a record</td><td><code>{:ok, struct}</code> or <code>{:error, changeset}</code></td><td><code>.destroy</code></td></tr>
+<tr><td><code>Repo.insert!(changeset)</code></td><td>Insert or raise</td><td>struct</td><td><code>.save!</code></td></tr>
+<tr><td><code>Repo.delete_all(query)</code></td><td>Delete matching records</td><td><code>{count, nil}</code></td><td><code>.delete_all</code></td></tr>
+<tr><td><code>Repo.preload(struct, assocs)</code></td><td>Load associations</td><td>struct with assocs loaded</td><td>eager loading</td></tr>
+<tr><td><code>Repo.transaction(fn)</code></td><td>Wrap in a transaction</td><td><code>{:ok, result}</code> or <code>{:error, reason}</code></td><td><code>transaction { }</code></td></tr>
+</table>
+
+<div class="key-insight">
+<strong>Key insight:</strong> The <code>!</code> convention: functions ending in <code>!</code> raise on failure instead of returning <code>{:error, ...}</code>. Use <code>Repo.get!</code> when a missing record is a bug; use <code>Repo.get</code> when it's an expected possibility (like a user typo).
+</div>
+
+<p>Here's how Speechwave uses the simple Repo functions:</p>
+
+<p class="file-ref"><a href="https://github.com/speechwave-live/speechwave/blob/main/lib/speechwave/talks.ex#L46">lib/speechwave/talks.ex:46</a></p>
+<pre><code># Find by a single column, returns nil if not found
+def get_talk_by_slug(slug), do: Repo.get_by(Talk, slug: slug)</code></pre>
+
+<p class="file-ref"><a href="https://github.com/speechwave-live/speechwave/blob/main/lib/speechwave/talks.ex#L30-L31">lib/speechwave/talks.ex:30-31</a></p>
+<pre><code># Find by multiple columns, raises if not found
+# The user_id check ensures you can't access another user's talk
+def get_talk!(scope, id) do
+  Repo.get_by!(Talk, id: id, user_id: scope.user.id)
+end</code></pre>
+
+<div class="ruby">
+<strong>Rails equivalent:</strong>
+<pre><code>Talk.find_by(slug: slug)              # Repo.get_by
+Talk.find_by!(id: id, user_id: uid)   # Repo.get_by!
+</code></pre>
+</div>
+
+<h2>The <code>from</code> Query syntax</h2>
+
+<p>For anything beyond a simple get, you build queries with <code>from</code>. This is where Ecto diverges most from ActiveRecord.</p>
+
+<h3>Basic query</h3>
+
+<p class="file-ref"><a href="https://github.com/speechwave-live/speechwave/blob/main/lib/speechwave/talks.ex#L27">lib/speechwave/talks.ex:27</a></p>
+<pre><code>Repo.all(from t in Talk, where: t.user_id == ^user.id, order_by: [desc: t.inserted_at])</code></pre>
+
+<p>Breaking this down:</p>
+
+<table>
+<tr><th>Part</th><th>Meaning</th></tr>
+<tr><td><code>from t in Talk</code></td><td>"From the talks table, bind each row to <code>t</code>"</td></tr>
+<tr><td><code>where: t.user_id == ^user.id</code></td><td>"Where user_id equals this value"</td></tr>
+<tr><td><code>order_by: [desc: t.inserted_at]</code></td><td>"Order by inserted_at descending"</td></tr>
+<tr><td><code>Repo.all(...)</code></td><td>"Execute and return all results as a list"</td></tr>
+</table>
+
+<div class="ruby">
+<strong>Rails:</strong> <code>Talk.where(user_id: user.id).order(inserted_at: :desc)</code>
+</div>
+
+<h3>The pin operator <code>^</code> in queries</h3>
+
+<p>The <code>^</code> is the <strong>pin operator</strong>, covered in <a href="0001-pattern-matching.html">Lesson 1</a>. In pattern matching, it means "use this variable's existing value instead of rebinding it." In Ecto queries, it serves the same purpose. It tells Ecto "this is an Elixir value to inject as a parameter, not a database column name."</p>
+
+<pre><code>where: t.user_id == ^user.id
+#                    ^ "inject the VALUE of user.id here"
+
+where: t.user_id == t.some_other_column
+#                   no ^ means "compare to another column"</code></pre>
+
+<div class="warning">
+<strong>Important:</strong> Forgetting the <code>^</code> is a common mistake. Without it, Ecto thinks you're referencing another database column. You'll get a compile error or unexpected results.
+</div>
+
+<h3>Query with join and aggregation</h3>
+
+<p>This is the most complex query in Speechwave: listing sessions with their reaction counts.</p>
+
+<p class="file-ref"><a href="https://github.com/speechwave-live/speechwave/blob/main/lib/speechwave/talks.ex#L95-L103">lib/speechwave/talks.ex:95-103</a></p>
+<pre><code>def list_sessions(talk_id) do
+  from(s in TalkSession,
+    where: s.talk_id == ^talk_id,
+    left_join: r in assoc(s, :reactions),
+    group_by: s.id,
+    select: %{session: s, reaction_count: count(r.id)},
+    order_by: [desc: s.started_at, desc: s.id]
+  )
+  |> Repo.all()
+end</code></pre>
+
+<p>Step by step:</p>
+
+<table>
+<tr><th>Clause</th><th>SQL equivalent</th><th>Purpose</th></tr>
+<tr><td><code>from s in TalkSession</code></td><td><code>FROM talk_sessions s</code></td><td>Source table, bound to <code>s</code></td></tr>
+<tr><td><code>where: s.talk_id == ^talk_id</code></td><td><code>WHERE s.talk_id = ?</code></td><td>Filter to this talk</td></tr>
+<tr><td><code>left_join: r in assoc(s, :reactions)</code></td><td><code>LEFT JOIN reactions r ON ...</code></td><td>Join reactions (left join keeps sessions with zero reactions)</td></tr>
+<tr><td><code>group_by: s.id</code></td><td><code>GROUP BY s.id</code></td><td>One row per session</td></tr>
+<tr><td><code>select: %{session: s, reaction_count: count(r.id)}</code></td><td><code>SELECT s.*, COUNT(r.id)</code></td><td>Return a map with the session and its count</td></tr>
+<tr><td><code>order_by: [desc: s.started_at, desc: s.id]</code></td><td><code>ORDER BY s.started_at DESC, s.id DESC</code></td><td>Most recent first</td></tr>
+</table>
+
+<div class="ruby">
+<strong>Rails:</strong>
+<pre><code>TalkSession
+  .where(talk_id: talk_id)
+  .left_joins(:reactions)
+  .group(:id)
+  .select("talk_sessions.*, COUNT(reactions.id) AS reaction_count")
+  .order(started_at: :desc, id: :desc)</code></pre>
+<p>Very similar structure, but Ecto's <code>select</code> returns a map (<code>%{session: ..., reaction_count: ...}</code>) rather than attaching a virtual attribute to the model. This is why in <a href="0004-liveview-lifecycle.html">Lesson 4</a> the template destructures with <code>for %{session: session, reaction_count: reaction_count} &lt;- @sessions</code>.</p>
+</div>
+
+<h3>Custom select shapes</h3>
+
+<p>The <code>select</code> clause controls what Ecto returns. Without it, you get schema structs. With it, you can return maps, tuples, or specific fields:</p>
+
+<p class="file-ref"><a href="https://github.com/speechwave-live/speechwave/blob/main/lib/speechwave/reactions.ex#L28-L35">lib/speechwave/reactions.ex:28-35</a></p>
+<pre><code>from(r in Reaction,
+  where: r.talk_session_id == ^session_id,
+  group_by: [r.slide_number, r.emoji],
+  select: %{slide_number: r.slide_number, emoji: r.emoji, count: count(r.id)},
+  order_by: [asc: r.slide_number]
+)
+|> Repo.all()</code></pre>
+
+<p>This returns a list of plain maps like <code>%{slide_number: 1, emoji: "👏", count: 42}</code>, not <code>%Reaction{}</code> structs. The select shape determines the shape of the results.</p>
+
+<h2>Associations: <code>preload</code> vs <code>join</code></h2>
+
+<p>In Rails, associations load eagerly or lazily depending on how you access them. In Ecto, associations are <em>never</em> loaded automatically. You must be explicit.</p>
+
+<p class="file-ref"><a href="https://github.com/speechwave-live/speechwave/blob/main/lib/speechwave/talks.ex#L49-L50">lib/speechwave/talks.ex:49-50</a></p>
+<pre><code>def get_talk_with_owner(slug) do
+  Repo.one(from t in Talk, where: t.slug == ^slug, preload: [:user])
+end</code></pre>
+
+<p>The <code>preload: [:user]</code> loads the associated user in a separate query. Without it, <code>talk.user</code> would be an <code>Ecto.Association.NotLoaded</code> struct, not <code>nil</code>, but a special placeholder that tells you "this wasn't loaded."</p>
+
+<p>You can also preload after fetching:</p>
+
+<p class="file-ref"><a href="https://github.com/speechwave-live/speechwave/blob/main/lib/speechwave/accounts.ex#L223">lib/speechwave/accounts.ex:223</a></p>
+<pre><code>Repo.preload(identity, :user).user</code></pre>
+
+<div class="key-insight">
+<strong>Key insight:</strong> Ecto's explicit loading prevents N+1 queries by design. In Rails, you might accidentally trigger <code>talk.user</code> inside a loop and generate dozens of queries. In Ecto, if you didn't preload it, you get an error, not a silent performance problem.
+</div>
+
+<h2><code>fragment</code>: Raw SQL escape hatch</h2>
+
+<p>When Ecto's query syntax can't express something, <code>fragment</code> lets you drop to raw SQL:</p>
+
+<p class="file-ref"><a href="https://github.com/speechwave-live/speechwave/blob/main/lib/speechwave/talks.ex#L131">lib/speechwave/talks.ex:131</a></p>
+<pre><code>where: fragment("(strftime('%s', ?) - strftime('%s', ?)) > 600", s.ended_at, s.started_at)</code></pre>
+
+<p>This uses SQLite's <code>strftime</code> to calculate session duration in seconds. The <code>?</code> placeholders are filled with the Ecto bindings, keeping it safe from SQL injection.</p>
+
+<div class="ruby">
+<strong>Rails equivalent:</strong>
+<pre><code>.where("(strftime('%s', ended_at) - strftime('%s', started_at)) > 600")</code></pre>
+</div>
+
+<h2>Transactions and <code>with</code></h2>
+
+<p>When multiple database operations must succeed or fail together:</p>
+
+<p class="file-ref"><a href="https://github.com/speechwave-live/speechwave/blob/main/lib/speechwave/accounts.ex#L220-L235">lib/speechwave/accounts.ex:220-235</a></p>
+<pre><code>defp oauth_upsert(provider, uid, email) do
+  case Repo.get_by(UserIdentity, provider: provider, uid: uid) do
+    %UserIdentity{} = identity ->
+      Repo.preload(identity, :user).user
+
+    nil ->
+      with {:ok, user} <- register_or_get_user_by_email(email),
+           {:ok, _identity} <-
+             %UserIdentity{}
+             |> UserIdentity.changeset(%{provider: provider, uid: uid, user_id: user.id})
+             |> Repo.insert() do
+        user
+      else
+        {:error, reason} -> Repo.rollback(reason)
+      end
+  end
+end</code></pre>
+
+<p>The <code>with</code> construct chains operations that might fail. Each <code>&lt;-</code> clause pattern matches the result. If it matches <code>{:ok, value}</code>, the value is bound and execution continues. If any clause doesn't match, it jumps to the <code>else</code> block.</p>
+
+<div class="ruby">
+<strong>Ruby equivalent (roughly):</strong>
+<pre><code>user = register_or_get_user_by_email(email)
+raise ActiveRecord::Rollback unless user
+
+identity = UserIdentity.create!(provider: provider, uid: uid, user_id: user.id)
+user
+rescue => e
+  raise ActiveRecord::Rollback
+</code></pre>
+<p>The <code>with</code> construct is cleaner. Each step explicitly declares what success looks like, and failure handling is centralized in the <code>else</code> block. It's called from within <code>Repo.transaction</code> (line 207) so <code>Repo.rollback</code> aborts the whole transaction.</p>
+</div>
+
+<div class="key-insight">
+<strong>Key insight:</strong> <code>with</code> is not specific to database code. It works with any <code>{:ok, value}</code> / <code>{:error, reason}</code> pattern. But you'll see it most often in context modules where multiple Repo operations need to succeed together.
+</div>
+
+<hr>
+
+<h2>Practice</h2>
+
+<div class="quiz" id="q1">
+  <h3>Question 1</h3>
+  <p>What does the <code>^</code> do in this query?</p>
+  <pre><code>from t in Talk, where: t.user_id == ^user.id</code></pre>
+  <label><input type="radio" name="q1" value="a" onclick="checkAnswer('q1','c')"> Negates the comparison (NOT equal)</label>
+  <label><input type="radio" name="q1" value="b" onclick="checkAnswer('q1','c')"> Casts user.id to an integer</label>
+  <label><input type="radio" name="q1" value="c" onclick="checkAnswer('q1','c')"> Injects the Elixir variable's value into the query as a parameter</label>
+  <label><input type="radio" name="q1" value="d" onclick="checkAnswer('q1','c')"> References the primary key of the users table</label>
+  <div class="feedback correct" id="q1-correct">Right. The <code>^</code> (pin) tells Ecto: "use the current value of <code>user.id</code> as a query parameter." Without it, Ecto would look for a column called <code>user</code> on the <code>talks</code> table. This is the same pin operator from pattern matching, applied in a query context: "don't rebind, use the existing value."</div>
+  <div class="feedback wrong" id="q1-wrong">This is the pin operator from <a href="0001-pattern-matching.html">Lesson 1</a>, applied in a query context. It tells Ecto to use an <em>external</em> Elixir value, not a database column. Try again.</div>
+</div>
+
+<div class="quiz" id="q2">
+  <h3>Question 2</h3>
+  <p>What's the difference between <code>Repo.get(Talk, 42)</code> and <code>Repo.get!(Talk, 42)</code>?</p>
+  <label><input type="radio" name="q2" value="a" onclick="checkAnswer('q2','b')"> <code>get</code> returns a list; <code>get!</code> returns a single record</label>
+  <label><input type="radio" name="q2" value="b" onclick="checkAnswer('q2','b')"> <code>get</code> returns <code>nil</code> if not found; <code>get!</code> raises an exception</label>
+  <label><input type="radio" name="q2" value="c" onclick="checkAnswer('q2','b')"> <code>get</code> is read-only; <code>get!</code> locks the row for update</label>
+  <label><input type="radio" name="q2" value="d" onclick="checkAnswer('q2','b')"> <code>get!</code> bypasses validations; <code>get</code> does not</label>
+  <div class="feedback correct" id="q2-correct">Correct. This is a convention across Elixir: <code>!</code> functions raise on failure. Use <code>get!</code> when a missing record means something is wrong (a bug, a broken link). Use <code>get</code> when absence is expected (user searching for a slug that doesn't exist). Same pattern applies to <code>insert</code>/<code>insert!</code>, <code>update</code>/<code>update!</code>, etc.</div>
+  <div class="feedback wrong" id="q2-wrong">The <code>!</code> suffix in Elixir functions signals how failure is handled, not what operation is performed. Try again.</div>
+</div>
+
+<div class="quiz" id="q3">
+  <h3>Question 3</h3>
+  <p>Why does Speechwave use <code>left_join</code> instead of <code>join</code> in <code>list_sessions</code>?</p>
+  <pre><code>left_join: r in assoc(s, :reactions)</code></pre>
+  <label><input type="radio" name="q3" value="a" onclick="checkAnswer('q3','d')"> <code>left_join</code> is faster than <code>join</code> for large tables</label>
+  <label><input type="radio" name="q3" value="b" onclick="checkAnswer('q3','d')"> <code>left_join</code> loads the association automatically</label>
+  <label><input type="radio" name="q3" value="c" onclick="checkAnswer('q3','d')"> <code>left_join</code> filters out sessions with too many reactions</label>
+  <label><input type="radio" name="q3" value="d" onclick="checkAnswer('q3','d')"> <code>left_join</code> keeps sessions with zero reactions; <code>join</code> would exclude them</label>
+  <div class="feedback correct" id="q3-correct">Exactly. An inner <code>join</code> only returns rows where both sides match. Sessions with no reactions would disappear. A <code>left_join</code> keeps all sessions and fills in <code>NULL</code> for the reaction side when there are none, so <code>count(r.id)</code> returns 0 for those sessions. This is standard SQL behavior, the same in any language.</div>
+  <div class="feedback wrong" id="q3-wrong">Think about what happens to a session that has no reactions yet. What does each type of join do with rows that have no match on the joined side? Try again.</div>
+</div>
+
+<div class="quiz" id="q4">
+  <h3>Question 4</h3>
+  <p>What happens if you access <code>talk.user</code> without preloading the <code>:user</code> association?</p>
+  <label><input type="radio" name="q4" value="a" onclick="checkAnswer('q4','c')"> It returns <code>nil</code></label>
+  <label><input type="radio" name="q4" value="b" onclick="checkAnswer('q4','c')"> It automatically runs a query to fetch the user (lazy loading)</label>
+  <label><input type="radio" name="q4" value="c" onclick="checkAnswer('q4','c')"> It returns an <code>Ecto.Association.NotLoaded</code> struct, which will cause an error if you try to use it</label>
+  <label><input type="radio" name="q4" value="d" onclick="checkAnswer('q4','c')"> It raises a compile-time error</label>
+  <div class="feedback correct" id="q4-correct">Right. Ecto never lazy-loads. Instead, unloaded associations are <code>%Ecto.Association.NotLoaded{}</code>, a struct that will fail loudly if you try to access fields on it. This is intentional: it forces you to be explicit about what data you need, preventing accidental N+1 queries. In practice, you'll see the error "cannot access... association was not loaded" and know you need to add a <code>preload</code>.</div>
+  <div class="feedback wrong" id="q4-wrong">Ecto does not have lazy loading. That's a deliberate design choice to prevent N+1 queries. The value isn't <code>nil</code> either. Think about what Ecto puts there as a placeholder. Try again.</div>
+</div>
+
+<hr>
+
+<h2>Your next step</h2>
+
+<p>Open <code>lib/speechwave/accounts.ex</code> and read through every function. You now have the tools to understand all of them:</p>
+
+<ul>
+  <li>Pattern matching selects which clause runs</li>
+  <li>Pipes build changeset and query chains</li>
+  <li>Context modules organize the functions</li>
+  <li>Repo executes the database operations</li>
+  <li><code>with</code> chains fallible operations</li>
+</ul>
+
+<p>For a challenge, read <code>lib/speechwave/accounts/user_token.ex</code>. It has the most complex queries in the project (token verification with joins and time-based expiry). If you can read that file, you can read any Ecto code in Speechwave.</p>
+
+<p>If anything is unclear, ask your teacher. That's what it's here for.</p>
+
+<div class="nav">
+  <strong>Previous:</strong> <a href="0004-liveview-lifecycle.html">LiveView Lifecycle</a> · <strong>Reference:</strong> <a href="../reference/glossary.html">Glossary</a><br>
+  <strong>Next:</strong> <a href="0006-testing-with-exunit.html">Testing with ExUnit</a>
+</div>
+
+<script>
+function checkAnswer(qid, correct) {
+  const selected = document.querySelector(`input[name="${qid}"]:checked`).value;
+  const correctEl = document.getElementById(`${qid}-correct`);
+  const wrongEl = document.getElementById(`${qid}-wrong`);
+  if (selected === correct) {
+    correctEl.style.display = 'block';
+    wrongEl.style.display = 'none';
+  } else {
+    wrongEl.style.display = 'block';
+    correctEl.style.display = 'none';
+  }
+}
+</script>
+
+</body>
+</html>

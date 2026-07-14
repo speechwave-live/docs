@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Old Sock introduction to Elixir &amp; Speechwave for Ruby devs</title>
+<style>
+  body {
+    font-family: 'Palatino Linotype', Palatino, 'Book Antiqua', Georgia, serif;
+    max-width: 42em; margin: 2em auto; padding: 0 1.5em;
+    line-height: 1.6; color: #222;
+  }
+  h1 { font-size: 1.8em; border-bottom: 2px solid #333; padding-bottom: 0.3em; margin-bottom: 0.2em; }
+  .subtitle { font-size: 1.1em; color: #718096; margin-bottom: 2em; font-style: italic; }
+  h2 { font-size: 1.2em; margin-top: 2em; color: #1a1a2e; }
+  blockquote { border-left: 3px solid #cbd5e0; padding-left: 1em; color: #4a5568; margin: 1.5em 0; }
+  a { color: #4a5568; }
+  code {
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+    font-size: 0.88em; background: #f4f4f4; padding: 0.1em 0.3em; border-radius: 3px;
+  }
+  .key-insight { background: #f0fff4; border-left: 3px solid #38a169; padding: 0.8em 1em; margin: 1em 0; }
+  .key-insight strong { color: #276749; }
+  ol.lessons { padding-left: 1.2em; }
+  ol.lessons li { margin-bottom: 0.4em; }
+  .back-nav { display: block; font-size: 0.85em; color: #718096; text-decoration: none; margin-bottom: 1.5em; }
+  .back-nav:hover { color: #4a5568; }
+</style>
+</head>
+<body>
+<a class="back-nav" href="https://docs.speechwave.live/">&larr; docs.speechwave.live</a>
+
+<h1>The Old Sock introduction to Elixir &amp; Speechwave</h1>
+<p class="subtitle">For Ruby developers who need to read and modify the codebase</p>
+
+<h2>Why "Old Sock"?</h2>
+
+<p>Like a well-worn sock, this guide may have a few holes in it. It was built lesson-by-lesson to get a Ruby developer productive in the Speechwave codebase as fast as possible, not to be a comprehensive Elixir textbook. Where coverage is thin, you'll find links to authoritative external resources. Following those links and filling in the gaps yourself is part of the learning.</p>
+
+<h2>Who this is for</h2>
+
+<p>You're an experienced programmer with Ruby background. You've probably used Rails. You may have never touched a functional language. You need to read, understand, and modify a Phoenix LiveView application, specifically Speechwave.</p>
+
+<p>This guide won't teach you what a variable is or how a for-loop works. It will teach you how Elixir thinks differently from Ruby, and how those differences show up in every file of this project.</p>
+
+<h2>How it's organized</h2>
+
+<p>Eight lessons, each grounded in real Speechwave code. Every example is pulled from the actual codebase, with no toy examples and no abstract exercises. Ruby comparisons are used where they clarify, but the goal is to think in Elixir, not to translate.</p>
+
+<ol class="lessons">
+  <li><strong><a href="0001-pattern-matching.html">Pattern Matching</a></strong>: the <code>=</code> operator isn't assignment, and that changes everything</li>
+  <li><strong><a href="0002-pipe-operator.html">The Pipe Operator</a></strong>: how <code>|&gt;</code> replaces method chaining with something more flexible</li>
+  <li><strong><a href="0003-modules-and-structs.html">Modules &amp; Structs</a></strong>: how Elixir organizes code without classes</li>
+  <li><strong><a href="0004-liveview-lifecycle.html">The LiveView Lifecycle</a></strong>: mount, handle_event, assigns, and real-time updates</li>
+  <li><strong><a href="0005-ecto-queries.html">Ecto Queries</a></strong>: reading and writing database code (Ecto vs ActiveRecord)</li>
+  <li><strong><a href="0006-testing-with-exunit.html">Testing with ExUnit</a></strong>: test structure, assertions, LiveView testing, PubSub testing</li>
+  <li><strong><a href="0007-genserver.html">GenServer</a></strong>: stateful processes, supervision, and "let it crash"</li>
+  <li><strong><a href="0008-debugging.html">Debugging</a></strong>: IO.inspect, dbg, IEx.pry, and the runtime console</li>
+</ol>
+
+<p>Each lesson includes interactive quizzes or hands-on exercises, and ends with a suggested next step, usually reading a specific Speechwave file with fresh eyes.</p>
+
+<h2>How to get the most out of it</h2>
+
+<ul>
+  <li><strong>Keep the public <a href="https://github.com/speechwave-live/speechwave">Speechwave repo</a> open alongside each lesson.</strong> The examples reference specific files and line numbers, and every file reference links straight to the source. Reading real code while you learn is the whole point.</li>
+  <li><strong>Do the exercises.</strong> Reading about pattern matching is not the same as recognizing it in code. The quizzes are designed to build that recognition.</li>
+  <li><strong>Follow the primary source links.</strong> Each lesson links to the official documentation for deeper coverage. The lessons teach you enough to be productive; the docs fill in the rest.</li>
+  <li><strong>Use the reference pages.</strong> They're designed as quick-reference cheat sheets you can print or keep open while working. The <a href="../reference/glossary.html">glossary</a> in particular maps every Elixir term to its Ruby equivalent.</li>
+  <li><strong>Don't read all eight lessons in one sitting.</strong> Each one introduces a paradigm shift. Let each one settle before moving on. Ideally, spend some time reading Speechwave code between lessons.</li>
+</ul>
+
+<div class="key-insight">
+<strong>The underlying premise:</strong> You don't need to master Elixir to be productive in this codebase. You need to recognize about a dozen patterns that appear everywhere, understand how Phoenix wires things together, and know where to look when something is unfamiliar. That's what these lessons deliver.
+</div>
+
+<h2>Prerequisites</h2>
+
+<ul>
+  <li>Elixir and Erlang installed (<code>elixir -v</code> should work)</li>
+  <li>The Speechwave project cloned and dependencies fetched (<code>mix setup</code>)</li>
+  <li>A terminal and a code editor</li>
+  <li>Familiarity with Ruby and ideally Rails (for the comparison points)</li>
+</ul>
+
+<p>Ready? Start with <a href="0001-pattern-matching.html">Lesson 1: Pattern Matching</a>.</p>
+
+</body>
+</html>
