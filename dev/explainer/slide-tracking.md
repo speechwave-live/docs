@@ -57,13 +57,13 @@ The background worker is the one that actually pushes to the channel, with <code
 
 <div class="code-block"><span class="label">reaction_channel.ex</span><pre>
 def handle_in("slide_changed", %{"slide" => slide}, socket)
-    when is_integer(slide) and slide > 0 do
+    when is_integer(slide) and slide >= 0 do
   SpeechwaveWeb.Endpoint.broadcast!("slides:#{socket.assigns.talk.slug}", "slide_changed", %{slide: slide})
   {:reply, :ok, socket}
 end
 </pre></div>
 
-Slide <code>0</code> is the sentinel for unknown, so the guard means it's never broadcast; a second clause just acknowledges it without broadcasting. <code>TalkLive</code> subscribes to the <code>slides:#{slug}</code> topic (see the mount walkthrough in [Emoji journey](/dev/explainer/emoji-journey.html)) and updates its <code>current_slide</code> assign, so the next reaction tap carries the right slide number. There's a small, natural lag between a slide change and the first reaction tagged with it, which is expected given the polling interval.
+Slide <code>0</code> is the sentinel for unknown/general, and it's broadcast just like any other slide number. This matters because <code>getSlide()</code> reports <code>0</code> whenever the accessibility element isn't present — not just before presenting starts, but also if the speaker leaves Slideshow mode mid-session (back to the editor, or switching windows). Broadcasting <code>0</code> in that case resets every attendee's <code>current_slide</code> back to the general pool, so reactions sent while nothing is actually being presented don't get misattributed to whatever slide was on screen last. A second clause still rejects non-integer or negative payloads without broadcasting. <code>TalkLive</code> subscribes to the <code>slides:#{slug}</code> topic (see the mount walkthrough in [Emoji journey](/dev/explainer/emoji-journey.html)) and updates its <code>current_slide</code> assign, so the next reaction tap carries the right slide number. There's a small, natural lag between a slide change and the first reaction tagged with it, which is expected given the polling interval.
 
 ## Where the code lives
 
