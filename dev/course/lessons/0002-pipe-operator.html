@@ -110,7 +110,7 @@ end</code></pre>
 <p>Another example: generating an API key.</p>
 
 <p class="file-ref"><a href="https://github.com/speechwave-live/speechwave/blob/main/lib/speechwave/accounts.ex#L53">lib/speechwave/accounts.ex:53</a></p>
-<pre><code>new_key = :crypto.strong_rand_bytes(32) |> Base.encode16(case: :lower)</code></pre>
+<pre><code>new_key = :crypto.strong_rand_bytes(byte_length) |> Base.encode16(case: :lower)</code></pre>
 
 <p>This pipes across two completely different modules (<code>:crypto</code> from Erlang, <code>Base</code> from Elixir). In Ruby, you'd need to wrap the result: <code>Base.encode16(crypto_output)</code>. Here, the pipe handles it seamlessly.</p>
 

@@ -72,7 +72,7 @@
 
 <p>This separation means you can build a query, inspect it, compose it with other queries, and only execute it when ready. ActiveRecord does something similar under the hood, but Ecto makes it explicit.</p>
 
-<h2>Repo: The seven operations</h2>
+<h2>Repo: the seven operations</h2>
 
 <p>Almost every database call in Speechwave uses one of these <code>Repo</code> functions:</p>
 
@@ -118,7 +118,7 @@ Talk.find_by!(id: id, user_id: uid)   # Repo.get_by!
 </code></pre>
 </div>
 
-<h2>The <code>from</code> Query syntax</h2>
+<h2>The <code>from</code> query syntax</h2>
 
 <p>For anything beyond a simple get, you build queries with <code>from</code>. This is where Ecto diverges most from ActiveRecord.</p>
 
@@ -229,18 +229,19 @@ end</code></pre>
 <strong>Key insight:</strong> Ecto's explicit loading prevents N+1 queries by design. In Rails, you might accidentally trigger <code>talk.user</code> inside a loop and generate dozens of queries. In Ecto, if you didn't preload it, you get an error, not a silent performance problem.
 </div>
 
-<h2><code>fragment</code>: Raw SQL escape hatch</h2>
+<h2><code>fragment</code>: raw SQL escape hatch</h2>
 
 <p>When Ecto's query syntax can't express something, <code>fragment</code> lets you drop to raw SQL:</p>
 
 <p class="file-ref"><a href="https://github.com/speechwave-live/speechwave/blob/main/lib/speechwave/talks.ex#L131">lib/speechwave/talks.ex:131</a></p>
-<pre><code>where: fragment("(strftime('%s', ?) - strftime('%s', ?)) > 600", s.ended_at, s.started_at)</code></pre>
+<pre><code># threshold_seconds is the "full session" cutoff; see Plans and limits for the actual value
+where: fragment("(strftime('%s', ?) - strftime('%s', ?)) > ?", s.ended_at, s.started_at, threshold_seconds)</code></pre>
 
-<p>This uses SQLite's <code>strftime</code> to calculate session duration in seconds. The <code>?</code> placeholders are filled with the Ecto bindings, keeping it safe from SQL injection.</p>
+<p>This uses SQLite's <code>strftime</code> to calculate session duration in seconds and compares it against a threshold (see <a href="/dev/explainer/plans-limits.html">Plans and limits</a> for what that threshold actually is). The <code>?</code> placeholders are filled with the Ecto bindings, keeping it safe from SQL injection.</p>
 
 <div class="ruby">
 <strong>Rails equivalent:</strong>
-<pre><code>.where("(strftime('%s', ended_at) - strftime('%s', started_at)) > 600")</code></pre>
+<pre><code>.where("(strftime('%s', ended_at) - strftime('%s', started_at)) > ?", threshold_seconds)</code></pre>
 </div>
 
 <h2>Transactions and <code>with</code></h2>

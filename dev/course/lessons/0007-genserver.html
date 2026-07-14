@@ -103,8 +103,6 @@
 <p class="file-ref"><a href="https://github.com/speechwave-live/speechwave/blob/main/lib/speechwave/rate_limiter.ex">lib/speechwave/rate_limiter.ex</a></p>
 <pre><code>defmodule Speechwave.RateLimiter do
   use GenServer
-
-  @cooldown_ms 3_000
   @table :rate_limiter
 
   def start_link(_opts), do: GenServer.start_link(__MODULE__, [], name: __MODULE__)
@@ -133,7 +131,6 @@ end</code></pre>
 <table>
 <tr><th>Line</th><th>What it does</th></tr>
 <tr><td><code>use GenServer</code></td><td>Injects the GenServer behaviour, providing default implementations of all callbacks</td></tr>
-<tr><td><code>@cooldown_ms 3_000</code></td><td>Module attribute holding the cooldown window, in milliseconds. The underscores are numeric separators (like <code>3_000</code> = <code>3000</code>)</td></tr>
 <tr><td><code>@table :rate_limiter</code></td><td>Name of the ETS table (an atom)</td></tr>
 <tr><td><code>start_link/1</code></td><td><strong>Client API.</strong> Starts the GenServer process, registering it under its module name so you can find it</td></tr>
 <tr><td><code>init/1</code></td><td><strong>Server callback.</strong> Runs once when the process starts. Creates the ETS table and returns the initial state (<code>%{}</code>)</td></tr>
