@@ -58,9 +58,10 @@ width="700" }
 Once you're connected, the popup shows a session area below the connect button.
 Click **Start Session** to begin recording reactions for this run of your talk.
 The button changes to **Stop Session** while one is running, along with a slide
-indicator ("Slide 3", or "Slide —" if none is detected yet). Click **Stop
-Session** when you're done presenting. Your [dashboard](dashboard.html) is
-where you rename sessions and review their analytics afterward.
+indicator that shows the current slide number, or a placeholder if none is
+detected yet. Click **Stop Session** when you're done presenting. Your
+[dashboard](dashboard.html) is where you rename sessions and review their
+analytics afterward.
 
 ![Speechwave Chrome extension popup connected to a talk with an active session
 running](/assets/images/screenshot-extension-popup-connected.png){: width="280"
