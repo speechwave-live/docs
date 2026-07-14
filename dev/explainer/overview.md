@@ -65,7 +65,7 @@ The full chapter on this is [WebSockets](/dev/explainer/websockets.html), but th
 
 Here's the shape of the codebase, trimmed to the parts these chapters actually walk through.
 
-<div class="code-block"><span class="label">Project structure</span>
+<div class="code-block"><span class="label">Project structure</span><pre>
 lib/speechwave/                     core domain logic, no web concerns
   application.ex                    supervision tree, see Supervision tree
   talks.ex                          talks and talk sessions
@@ -88,6 +88,6 @@ lib/speechwave_web/
   router.ex                         routes and live_session scopes
 
 chrome-extension/                   separate repo, see Chrome extension
-</div>
+</pre></div>
 
 Each piece gets its own chapter. Start with <a href="https://github.com/speechwave-live/speechwave/blob/main/lib/speechwave/talks.ex">talks.ex</a> and <a href="https://github.com/speechwave-live/speechwave/blob/main/lib/speechwave/reactions.ex">reactions.ex</a> in [Data model](/dev/explainer/data-model.html) if you want to see how the pieces are actually stored.

@@ -22,13 +22,13 @@ Speechwave never asks anyone for a password. There are two ways to sign in, and 
 
 ## Routing
 
-<div class="code-block"><span class="label">Auth routes</span>
+<div class="code-block"><span class="label">Auth routes</span><pre>
 GET    /users/log-in                 UserLive.Login, :new
 GET    /users/magic_link/:token      UserSessionController, :magic_link
 DELETE /users/log-out                UserSessionController, :delete
 GET    /auth/:provider               UserSessionController, :oauth_authorize
 GET    /auth/:provider/callback      UserSessionController, :oauth_callback
-</div>
+</pre></div>
 
 ## The magic link flow
 
@@ -102,7 +102,7 @@ OAuth covers two different situations with the same provider code:
 
 Every context function that touches user-owned data takes a <code>%Scope{user: user}</code> as its first argument, so filtering by ownership is explicit instead of something you have to remember. This is a standard Phoenix 1.8 convention, not anything unique to Speechwave, but it's worth knowing because you'll see it everywhere in the codebase.
 
-<div class="code-block"><span class="label">accounts/scope.ex</span>
+<div class="code-block"><span class="label">accounts/scope.ex</span><pre>
 defmodule Speechwave.Accounts.Scope do
   defstruct user: nil
 end
@@ -112,7 +112,7 @@ def list_talks(%Scope{user: user}) do
   |> where(user_id: ^user.id)
   |> Repo.all()
 end
-</div>
+</pre></div>
 
 ## Users and linked identities
 

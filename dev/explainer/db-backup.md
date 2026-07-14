@@ -13,10 +13,10 @@ Speechwave runs on SQLite, and in production, <code>Speechwave.DbBackup</code> k
 
 After boot, the first backup runs a short time later, and then on a repeating hourly interval after that.
 
-<div class="code-block"><span class="label">db_backup.ex</span>
+<div class="code-block"><span class="label">db_backup.ex</span><pre>
 @initial_delay :timer.minutes(5)
 @interval :timer.hours(1)
-</div>
+</pre></div>
 
 ## How the snapshot gets taken
 
@@ -35,9 +35,9 @@ Failures are caught and logged. A failed backup doesn't crash the GenServer or a
 
 <code>run_now/0</code> is exposed so a backup can be triggered on demand from IEx or a Mix task, without waiting for the timer.
 
-<div class="code-block"><span class="label">iex</span>
+<div class="code-block"><span class="label">iex</span><pre>
 Speechwave.DbBackup.run_now()
-</div>
+</pre></div>
 
 ## Where the code lives
 

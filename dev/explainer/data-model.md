@@ -61,9 +61,9 @@ One row per emoji tap, but only while a session is recording.
 
 The full set the attendee can pick from, straight from <a href="https://github.com/speechwave-live/speechwave/blob/main/lib/speechwave_web/live/talk_live.ex">talk_live.ex</a>, is:
 
-<div class="code-block"><span class="label">Attendee emoji set</span>
+<div class="code-block"><span class="label">Attendee emoji set</span><pre>
 ❤️ 😂 👏 🤯 🎉 😮 🎯 🔥 💡
-</div>
+</pre></div>
 
 ## Where the code lives
 

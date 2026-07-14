@@ -9,7 +9,7 @@ nav_order: 9
 
 Every long-lived process in Elixir and OTP lives under a supervisor, and Speechwave is no exception. Here's the top level of the tree, straight from <code>Speechwave.Application</code>.
 
-<div class="code-block"><span class="label">application.ex, :one_for_one</span>
+<div class="code-block"><span class="label">application.ex, :one_for_one</span><pre>
 Speechwave.Application (supervisor)
 ├── Telemetry supervisor
 ├── Speechwave.Repo               (Ecto / SQLite)
@@ -20,7 +20,7 @@ Speechwave.Application (supervisor)
 ├── SpeechwaveWeb.Endpoint        (HTTP + both WebSocket endpoints)
 ├── SpeechwaveWeb.Presence        (Channel capacity tracking)
 └── Speechwave.DbBackup           (only in production, once storage is configured)
-</div>
+</pre></div>
 
 The strategy is <code>:one_for_one</code>: if one child crashes, only that child restarts. That works here because there's no shared state between children beyond PubSub, and PubSub is itself supervised.
 

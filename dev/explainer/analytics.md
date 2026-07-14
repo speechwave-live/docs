@@ -13,7 +13,7 @@ Once a talk is over, a speaker can review exactly how each slide landed. That re
 
 ## The aggregation query
 
-<div class="code-block"><span class="label">reactions.ex</span>
+<div class="code-block"><span class="label">reactions.ex</span><pre>
 def slide_reaction_totals(session_id) do
   from(r in Reaction,
     where: r.talk_session_id == ^session_id,
@@ -23,7 +23,7 @@ def slide_reaction_totals(session_id) do
   )
   |> Repo.all()
 end
-</div>
+</pre></div>
 
 <code>SessionAnalyticsLive</code> groups the results by slide number and renders a bar per slide using plain Tailwind classes, no JavaScript charting library involved. Each bar's height is relative to that slide's own maximum count, so a slide with fewer total reactions still shows a readable shape rather than a flat line next to a busier one.
 
@@ -38,10 +38,10 @@ At <code>/sessions/:id/compare/:other_id</code>, both sessions load and render s
 
 ## Route placement
 
-<div class="code-block"><span class="label">router.ex</span>
+<div class="code-block"><span class="label">router.ex</span><pre>
 live "/sessions/:id",                  SessionAnalyticsLive, :show
 live "/sessions/:id/compare/:other_id", SessionAnalyticsLive, :compare
-</div>
+</pre></div>
 
 Both routes sit inside the same authenticated live_session as the rest of the speaker-facing app.
 

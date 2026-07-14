@@ -3,6 +3,7 @@ title: Codebase explainer
 parent: For developers
 has_children: true
 nav_order: 1
+has_toc: false
 ---
 
 # Codebase explainer

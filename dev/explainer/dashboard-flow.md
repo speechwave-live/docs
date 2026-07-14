@@ -19,10 +19,10 @@ A speaker enters a title, and the slug auto-generates from it. The talk is scope
 
 Each talk gets a QR code, meant for display on the speaker's first slide so attendees can scan it and land straight on the talk's page. The <code>QRCode</code> module wraps the <code>EQRCode</code> library to produce a PNG encoded as a base64 data URI, ready to drop into an <code>&lt;img&gt;</code> tag or offer as a download.
 
-<div class="code-block"><span class="label">qr_code.ex</span>
+<div class="code-block"><span class="label">qr_code.ex</span><pre>
 url = SpeechwaveWeb.Endpoint.url() <> "/t/#{talk.slug}"
 # e.g. https://speechwave.live/t/my-talk
-</div>
+</pre></div>
 
 ## Where the code lives
 

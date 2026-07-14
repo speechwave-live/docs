@@ -13,7 +13,7 @@ This is the core loop of the whole product: an attendee taps an emoji on their p
 
 When an attendee opens <code>/t/my-talk</code>, <code>TalkLive.mount/3</code> runs twice: once for the initial HTTP render, and again once the WebSocket connects.
 
-<div class="code-block"><span class="label">talk_live.ex</span>
+<div class="code-block"><span class="label">talk_live.ex</span><pre>
 def mount(%{"slug" => slug}, _session, socket) do
   case Talks.get_talk_by_slug(slug) do
     nil -> {:ok, redirect(socket, to: "/")}
@@ -25,7 +25,7 @@ def mount(%{"slug" => slug}, _session, socket) do
       {:ok, assign(socket, talk: talk, emojis: @emojis, session_id: socket.id, current_slide: 0)}
   end
 end
-</div>
+</pre></div>
 
 <code>connected?(socket)</code> is false on the first render and true once the socket upgrades, so subscribing only when connected avoids subscribing twice. Two PubSub topics get subscribed here: <code>reactions:#{slug}</code>, which this chapter is about, and <code>slides:#{slug}</code>, covered in [Slide tracking](/dev/explainer/slide-tracking.html). An unknown slug redirects home instead of erroring. And <code>session_id: socket.id</code> gets set once here, then used throughout as the rate limiter's bucket key.
 

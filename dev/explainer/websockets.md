@@ -13,16 +13,16 @@ Two separate WebSocket connections power Speechwave, and they don't know about e
 
 This one powers the attendee's page and is managed entirely by Phoenix LiveView. It handles <code>phx-click</code> events going up, <code>push_event</code> going down, and the diff-based page sync that makes LiveView feel instant without a page reload.
 
-<div class="code-block"><span class="label">endpoint.ex</span>
+<div class="code-block"><span class="label">endpoint.ex</span><pre>
 socket "/live", Phoenix.LiveView.Socket,
   websocket: [connect_info: [session: @session_options]]
-</div>
+</pre></div>
 
 ## The Channel socket (/socket)
 
 This is a bare Phoenix Channel socket, built for the Chrome extension, which isn't a web page and can't use LiveView.
 
-<div class="code-block"><span class="label">user_socket.ex</span>
+<div class="code-block"><span class="label">user_socket.ex</span><pre>
 defmodule SpeechwaveWeb.UserSocket do
   use Phoenix.Socket
   channel "reactions:*", SpeechwaveWeb.ReactionChannel
@@ -30,11 +30,11 @@ defmodule SpeechwaveWeb.UserSocket do
   def connect(_params, socket, _info), do: {:ok, socket}
   def id(_socket), do: nil
 end
-</div>
+</pre></div>
 
 The <code>"reactions:*"</code> pattern means the extension can attempt to join any <code>reactions:&lt;slug&gt;</code> topic at the socket level, but joining is gated much more strictly by the channel itself.
 
-<div class="code-block"><span class="label">reaction_channel.ex</span>
+<div class="code-block"><span class="label">reaction_channel.ex</span><pre>
 def join("reactions:" <> slug, %{"api_key" => api_key}, socket) do
   with {:talk, %Talks.Talk{} = talk} <- {:talk, Talks.get_talk_by_slug(slug)},
        {:user, %Accounts.User{} = user} <- {:user, Accounts.get_user_by_api_key(api_key)},
@@ -52,7 +52,7 @@ def join("reactions:" <> slug, %{"api_key" => api_key}, socket) do
     {:capacity, {:error, :limit_reached}} -> {:error, %{reason: "capacity_reached"}}
   end
 end
-</div>
+</pre></div>
 
 Four checks run in order, and each one has a specific failure reason:
 
@@ -71,10 +71,10 @@ A successful join also subscribes the channel to a per-user disconnect topic. If
 
 <code>check_origin: false</code> is set specifically on this socket so a <code>chrome-extension://</code> origin isn't rejected, something the LiveView socket doesn't need since browsers hit it directly.
 
-<div class="code-block"><span class="label">endpoint.ex</span>
+<div class="code-block"><span class="label">endpoint.ex</span><pre>
 socket "/socket", SpeechwaveWeb.UserSocket,
   websocket: [check_origin: false]
-</div>
+</pre></div>
 
 ## Why PubSub connects them
 
@@ -82,7 +82,7 @@ socket "/socket", SpeechwaveWeb.UserSocket,
 
 ## Rate limiting
 
-<div class="code-block"><span class="label">rate_limiter.ex</span>
+<div class="code-block"><span class="label">rate_limiter.ex</span><pre>
 defmodule Speechwave.RateLimiter do
   use GenServer
   @table :rate_limiter
@@ -95,7 +95,7 @@ defmodule Speechwave.RateLimiter do
     end
   end
 end
-</div>
+</pre></div>
 
 Each browser tab gets its own bucket, keyed by its connection id. Taps inside a short cooldown window are silently dropped; the button's client-side disabled state and countdown are the only UX signal, but the real enforcement happens here, server-side.
 
