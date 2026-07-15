@@ -71,4 +71,4 @@ width="700" }
 
 ---
 
-Ready to go? Head to your [dashboard](dashboard.html) and create your first talk.
+Ready to go? Head to your [dashboard](dashboard.html) and create your first talk, then connect the [extension](extension.html) to start your first session.
