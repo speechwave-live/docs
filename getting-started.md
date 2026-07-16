@@ -57,6 +57,10 @@ Once you start a session, it appears on your dashboard, where you can check on
 it during and after your talk, and compare it against past sessions for the
 same talk.
 
+Note: If a session is left running and never explicitly stopped (the extension
+crashes, or your laptop closes mid-talk) it is automatically closed after 4
+hours so it doesn't stay active indefinitely.
+
 ## 6. What happens during the talk
 
 Your audience taps emoji on their phones as you speak. Each reaction floats up
