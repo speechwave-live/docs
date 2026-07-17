@@ -1,0 +1,8 @@
+#:schema https://pitchfork.jdx.dev/schema.json
+
+# Port 4001 is pinned in _config.yml to avoid colliding with speechwave's
+# mix phx.server (port 4000) when both are run locally at once.
+[daemons.web]
+run = "exec bundle exec jekyll serve"
+port = { expect = [4001], bump = false }
+ready_http = { url = "http://localhost:4001/", status = [200] }
