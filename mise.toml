@@ -1,0 +1,6 @@
+[tools]
+ruby = "3.4.5"
+
+[tasks.build]
+description = "Build the Jekyll site"
+run = "bundle exec jekyll build"
