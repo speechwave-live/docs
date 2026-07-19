@@ -20,6 +20,10 @@ aux_links:
     - "https://speechwave.live"
 aux_links_new_tab: true
 
+exclude:
+  - mise.toml
+  - pitchfork.toml
+
 defaults:
   - scope:
       path: ""
