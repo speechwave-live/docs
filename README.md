@@ -30,7 +30,7 @@ bundle install
 Start the local dev server:
 
 ```bash
-pitchfork start web
+pitchfork start
 ```
 
 This runs `bundle exec jekyll serve` at `http://localhost:4001`. That port is
