@@ -5,6 +5,24 @@ nav_order: 5
 
 # Troubleshooting & FAQ
 
+## Why am I not getting a new magic link when I request one?
+
+Speechwave rate-limits magic-link requests, both by email address and by the
+IP address they come from, to stop the login form from being hammered by
+scripts. The confirmation screen looks the same either way, so a throttled
+request looks identical to one that actually sent an email.
+
+- **By email**: each address can get one new link every 60 seconds.
+  Requesting again sooner just doesn't send anything.
+- **By IP**: the first extra request within 30 seconds is blocked. Each
+  repeat violation doubles that cooldown, up to a 30-minute cap, and it
+  drops back to 30 seconds as soon as a request goes through.
+
+If you've requested a few links in quick succession, wait a minute or two,
+then try once more. Magic links expire after 15 minutes, so if you're
+troubleshooting an old one, requesting a fresh link after the cooldown
+clears is the right move.
+
 ## Why aren't emojis appearing on Google Slides?
 
 If you just installed, updated, or reloaded the extension, refresh any Google
